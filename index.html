@@ -62,105 +62,14 @@
     /* ── SPLIT LAYOUT ─────────────────────────────── */
     .split {
       display: grid;
-      grid-template-columns: 52.5fr 47.5fr;
+      grid-template-columns: 47.5fr 52.5fr; /* form left (narrower), photo right (wider) */
       min-height: 100vh;
     }
 
-    /* ── LEFT PANEL (photo only) ──────────────────── */
-    .panel-left {
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      padding: 2rem 2.25rem;
-
-      /*
-       * ── ADD YOUR PHOTO ───────────────────────────────
-       * Recommended dimensions: 2800 × 1800 px (landscape)
-       * Minimum: 1400 × 900 px  |  Format: JPEG, ≤ 500 KB
-       * Keep subject centred — CSS will crop evenly on all sides.
-       *
-       * Uncomment the two lines below and rename the file:
-       * background-image: url('photo.jpg');
-       * background-position: center;
-       * ─────────────────────────────────────────────────
-       */
-      background-size: cover;
-      background:
-        radial-gradient(ellipse 110% 60% at 30% 12%, rgba(22,36,88,0.75) 0%, transparent 65%),
-        radial-gradient(ellipse 60%  65% at 80% 80%, rgba(8,14,42,0.92)  0%, transparent 65%),
-        radial-gradient(ellipse 75%  40% at 8%  90%, rgba(52,30,8,0.38)  0%, transparent 70%),
-        #06080F;
-    }
-
-    /* film grain */
-    .panel-left::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
-      background-size: 220px 220px;
-      opacity: 0.5;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    /* bokeh warmth */
-    .bokeh {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-      background:
-        radial-gradient(circle 95px  at 78% 14%, rgba(255,200,100,0.10) 0%, transparent 70%),
-        radial-gradient(circle 50px  at 88% 26%, rgba(255,180, 70,0.08) 0%, transparent 60%),
-        radial-gradient(circle 140px at 16% 88%, rgba(255,155, 55,0.07) 0%, transparent 70%),
-        radial-gradient(circle 38px  at 55% 91%, rgba( 90,140,255,0.08) 0%, transparent 55%),
-        radial-gradient(circle 28px  at 32% 72%, rgba(255,210,130,0.06) 0%, transparent 50%);
-    }
-
-    /* bottom vignette — keeps logo readable over photo */
-    .vignette {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(4,6,16,0.55) 0%,
-        transparent 35%,
-        transparent 65%,
-        rgba(4,6,16,0.80) 100%
-      );
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .logo {
-      position: relative;
-      z-index: 3;
-      display: flex;
-      align-items: center;
-      gap: 0.38rem;
-      font-family: var(--serif);
-      font-size: 0.82rem;
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      color: rgba(255,255,255,0.85);
-      opacity: 0;
-      animation: up 0.7s ease forwards;
-    }
-
-    .logo-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #4A72E8;
-      flex-shrink: 0;
-    }
-
-    /* ── RIGHT PANEL ──────────────────────────────── */
+    /* ── RIGHT PANEL: form (appears LEFT in grid col 1) ── */
     .panel-right {
       background: var(--bg-right);
-      border-left: 1px solid var(--divider);
+      border-right: 1px solid var(--divider);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -189,7 +98,7 @@
     .toggle-btn:hover {
       background: rgba(74,114,232,0.12);
       border-color: rgba(74,114,232,0.3);
-      color: #4A72E8;
+      color: var(--blue);
     }
 
     .icon-sun  { display: none; }
@@ -197,7 +106,7 @@
     [data-theme="light"] .icon-sun  { display: block; }
     [data-theme="light"] .icon-moon { display: none; }
 
-    /* ── FORM WRAP ────────────────────────────────── */
+    /* ── FORM CONTENT ─────────────────────────────── */
     .form-wrap {
       width: 100%;
       max-width: 400px;
@@ -210,38 +119,34 @@
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--blue);
-      margin-bottom: 1.1rem;
+      margin-bottom: 1.5rem;
       opacity: 0;
       animation: up 0.65s ease 0.1s forwards;
     }
 
-    .headline {
+    .form-title {
       font-family: var(--garamond);
-      font-size: clamp(1.9rem, 2.6vw, 2.55rem);
+      font-size: clamp(2rem, 2.85vw, 2.6rem);
       font-weight: 400;
-      line-height: 1.12;
-      letter-spacing: -0.01em;
+      line-height: 1.05;
+      letter-spacing: -0.015em;
       color: var(--text);
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.45rem;
       opacity: 0;
       animation: up 0.65s ease 0.2s forwards;
       transition: color 0.35s;
     }
 
-    .tagline {
+    .form-sub {
       font-family: var(--serif);
-      font-size: 0.9rem;
+      font-size: 1.02rem;
       font-weight: 300;
       color: var(--muted);
-      margin-bottom: 2.75rem;
+      line-height: 1.5;
+      margin-bottom: 3.25rem;
       opacity: 0;
       animation: up 0.65s ease 0.3s forwards;
       transition: color 0.35s;
-    }
-
-    .tagline em {
-      font-style: normal;
-      color: var(--blue);
     }
 
     /* ── FORM FIELDS ──────────────────────────────── */
@@ -253,9 +158,7 @@
       animation: up 0.65s ease 0.4s forwards;
     }
 
-    .field {
-      position: relative;
-    }
+    .field { position: relative; }
 
     .field input {
       width: 100%;
@@ -274,7 +177,7 @@
 
     .field input::placeholder {
       color: var(--muted);
-      opacity: 0.5;
+      opacity: 0.55;
       font-weight: 300;
     }
 
@@ -289,8 +192,7 @@
 
     .field-icon {
       position: absolute;
-      right: 1rem;
-      top: 50%;
+      right: 1rem; top: 50%;
       transform: translateY(-50%);
       color: var(--muted);
       opacity: 0.45;
@@ -398,10 +300,7 @@
     }
 
     /* ── SUCCESS STATE ────────────────────────────── */
-    .success {
-      display: none;
-      text-align: center;
-    }
+    .success { display: none; text-align: center; }
 
     .success.show {
       display: block;
@@ -437,9 +336,148 @@
       line-height: 1.7;
     }
 
+    /* ── LEFT PANEL: photo (appears RIGHT in grid col 2) ── */
+    .panel-left {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      padding: 2rem 2.25rem;
+
+      /*
+       * ── ADD YOUR PHOTO ───────────────────────────────
+       * Recommended: 2800 × 1800 px  |  Min: 1400 × 900 px
+       * Format: JPEG, ≤ 500 KB. Keep subject centred.
+       *
+       * Uncomment these two lines and rename the file:
+       * background-image: url('photo.jpg');
+       * background-position: center;
+       * ─────────────────────────────────────────────────
+       */
+      background-size: cover;
+      background:
+        radial-gradient(ellipse 110% 60% at 30% 12%, rgba(22,36,88,0.75) 0%, transparent 65%),
+        radial-gradient(ellipse 60%  65% at 80% 80%, rgba(8,14,42,0.92)  0%, transparent 65%),
+        radial-gradient(ellipse 75%  40% at 8%  90%, rgba(52,30,8,0.38)  0%, transparent 70%),
+        #06080F;
+    }
+
+    /* film grain */
+    .panel-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+      background-size: 220px 220px;
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* warm bokeh */
+    .bokeh {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        radial-gradient(circle 95px  at 78% 14%, rgba(255,200,100,0.10) 0%, transparent 70%),
+        radial-gradient(circle 50px  at 88% 26%, rgba(255,180, 70,0.08) 0%, transparent 60%),
+        radial-gradient(circle 140px at 16% 88%, rgba(255,155, 55,0.07) 0%, transparent 70%),
+        radial-gradient(circle 38px  at 55% 91%, rgba( 90,140,255,0.08) 0%, transparent 55%),
+        radial-gradient(circle 28px  at 32% 72%, rgba(255,210,130,0.06) 0%, transparent 50%);
+    }
+
+    /* full vignette — darkens edges, keeps text readable over photo */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgba(4,6,16,0.92) 0%,
+        rgba(4,6,16,0.55) 30%,
+        rgba(4,6,16,0.20) 60%,
+        transparent 100%
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .logo {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 0.38rem;
+      font-family: var(--serif);
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: rgba(255,255,255,0.85);
+      opacity: 0;
+      animation: up 0.7s ease forwards;
+    }
+
+    .logo-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #4A72E8;
+      flex-shrink: 0;
+    }
+
+    /* centred text overlay on photo */
+    .left-copy {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 3;
+      width: 80%;
+    }
+
+    .headline {
+      font-family: var(--garamond);
+      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      font-weight: 400;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: #F2F5FF;
+      margin-bottom: 0.85rem;
+      opacity: 0;
+      animation: up 0.75s ease 0.15s forwards;
+    }
+
+    .tagline {
+      font-family: var(--serif);
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.55);
+      opacity: 0;
+      animation: up 0.75s ease 0.28s forwards;
+    }
+
+    .tagline em {
+      font-style: normal;
+      color: #4A72E8;
+    }
+
     /* ── ANIMATIONS ───────────────────────────────── */
     @keyframes up {
       from { opacity: 0; transform: translateY(11px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* left-copy has its own transform so override the animation start */
+    .left-copy .headline,
+    .left-copy .tagline {
+      animation-name: fade-up-copy;
+    }
+
+    @keyframes fade-up-copy {
+      from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -450,23 +488,24 @@
         grid-template-rows: 44svh 1fr;
       }
 
+      /* photo panel on top, form below */
+      .panel-left  { order: 1; }
+      .panel-right { order: 2; border-right: none; border-top: 1px solid var(--divider); }
+
       .panel-left { padding: 1.5rem; }
 
       .panel-right {
-        border-left: none;
-        border-top: 1px solid var(--divider);
         padding: 2.5rem 1.5rem 3rem;
         align-items: flex-start;
       }
 
       .form-wrap { max-width: 100%; }
 
-      .headline { font-size: 1.75rem; }
+      .headline { font-size: 1.85rem; }
 
-      .toggle-btn {
-        top: 1.1rem;
-        right: 1.25rem;
-      }
+      .left-copy { width: 88%; }
+
+      .toggle-btn { top: 1rem; right: 1.25rem; }
     }
   </style>
 </head>
@@ -474,25 +513,13 @@
 
 <div class="split">
 
-  <!-- LEFT: photo ────────────────────────────────── -->
-  <div class="panel-left">
-    <div class="bokeh"></div>
-    <div class="vignette"></div>
-
-    <div class="logo">
-      projectblue <span class="logo-dot"></span>
-    </div>
-  </div>
-
-  <!-- RIGHT: words + form ─────────────────────────── -->
+  <!-- GRID COL 1 (LEFT): form ─────────────────────── -->
   <div class="panel-right">
 
-    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode" title="Toggle light/dark mode">
-      <!-- moon (shown in dark mode) -->
+    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode" title="Toggle light / dark">
       <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <path d="M12.3 9.7A5.5 5.5 0 0 1 4.3 1.7a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13 10.3a.5.5 0 0 0-.7-.6z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12.3 9.7A5.5 5.5 0 0 1 4.3 1.7a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13 10.3a.5.5 0 0 0-.7-.6z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
       </svg>
-      <!-- sun (shown in light mode) -->
       <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
         <circle cx="7" cy="7" r="2.6" stroke="currentColor" stroke-width="1.1"/>
         <path d="M7 1.2V2.8M7 11.2V12.8M1.2 7H2.8M11.2 7H12.8M3.1 3.1l1.1 1.1M9.8 9.8l1.1 1.1M10.9 3.1l-1.1 1.1M4.2 9.8l-1.1 1.1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
@@ -502,8 +529,8 @@
     <div class="form-wrap">
 
       <p class="eyebrow">Early Access</p>
-      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
-      <p class="tagline">Built for <em>deeper connection.</em></p>
+      <h2 class="form-title">Create a room.</h2>
+      <p class="form-sub">Invite someone. Stay in sync.</p>
 
       <div class="success" id="success">
         <div class="check-ring">
@@ -559,6 +586,21 @@
         No spam. Just the first invite.
       </p>
 
+    </div>
+  </div>
+
+  <!-- GRID COL 2 (RIGHT): photo + text ───────────── -->
+  <div class="panel-left">
+    <div class="bokeh"></div>
+    <div class="vignette"></div>
+
+    <div class="logo">
+      projectblue <span class="logo-dot"></span>
+    </div>
+
+    <div class="left-copy">
+      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
+      <p class="tagline">Built for <em>deeper connection.</em></p>
     </div>
   </div>
 
