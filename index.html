@@ -49,33 +49,47 @@
 
     html, body {
       height: 100%;
-      background: var(--bg-right);
+      background: #050710;
       color: var(--text);
       font-family: var(--inter);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* ── GRID ─────────────────────────────────────── */
+    body {
+      padding: 14px;
+    }
+
+    [data-theme="light"] body {
+      background: #E8E2D6;
+    }
+
+    /* ── GRID + OUTER FRAME ───────────────────────── */
     .split {
       display: grid;
       grid-template-columns: 54fr 46fr;
-      min-height: 100vh;
+      min-height: calc(100vh - 28px);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="light"] .split {
+      border-color: rgba(11,14,20,0.10);
+      box-shadow: 0 20px 60px rgba(11,14,20,0.15);
     }
 
     /* ── LEFT PANEL: photo ────────────────────────── */
     .panel-left {
       position: relative;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
       padding: 2rem 2.5rem;
 
       background-color: #060810;
       background-image: url('photo.jpg');
       background-size: cover;
-      background-position: center;
+      background-position: center 30%;
     }
 
     /* film grain */
@@ -108,19 +122,17 @@
     .vignette {
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        to top,
-        rgba(4,6,14,0.96) 0%,
-        rgba(4,6,14,0.65) 28%,
-        rgba(4,6,14,0.18) 58%,
-        transparent 100%
-      );
+      background:
+        linear-gradient(90deg, rgba(4,6,14,0.55) 0%, rgba(4,6,14,0.20) 50%, rgba(4,6,14,0.55) 100%),
+        radial-gradient(ellipse 80% 60% at 50% 50%, transparent 0%, rgba(4,6,14,0.55) 100%);
       z-index: 2;
       pointer-events: none;
     }
 
     .logo {
-      position: relative;
+      position: absolute;
+      top: 2rem;
+      left: 2.5rem;
       z-index: 3;
       display: flex;
       align-items: center;
@@ -142,7 +154,11 @@
     }
 
     .left-copy {
-      position: relative;
+      position: absolute;
+      top: 50%;
+      left: 2.5rem;
+      right: 2.5rem;
+      transform: translateY(-50%);
       z-index: 3;
     }
 
@@ -217,7 +233,7 @@
     .form-wrap {
       width: 100%;
       max-width: 420px;
-      margin-top: -3vh; /* nudge above geometric centre to match mockup */
+      margin-top: -8vh; /* push higher to match mockup composition */
     }
 
     .form-title {
@@ -235,15 +251,17 @@
 
     .form-sub {
       font-family: var(--garamond);
-      font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+      font-size: clamp(1.2rem, 1.55vw, 1.45rem);
       font-weight: 400;
-      color: var(--muted);
-      line-height: 1.4;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.35;
       margin-bottom: 2.5rem;
       opacity: 0;
       animation: up 0.65s ease 0.25s forwards;
       transition: color 0.35s;
     }
+
+    [data-theme="light"] .form-sub { color: rgba(11,14,20,0.55); }
 
     /* ── FORM FIELDS ──────────────────────────────── */
     .form {
