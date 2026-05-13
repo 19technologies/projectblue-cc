@@ -5,71 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Project Blue — Listen Together</title>
   <meta name="description" content="Create a room. Invite someone. Stay in sync." />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234A72E8'/></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234C6CB3'/></svg>" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Roboto+Serif:opsz,wght@8..144,300;8..144,400;8..144,500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="lib/glass.css" />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── DARK (default) ───────────────────────────── */
+    /* ── DARK ─────────────────────────────────────── */
     :root,
     [data-theme="dark"] {
-      --bg-right:    #0D0F1F;
-      --blue:        #4A72E8;
-      --blue-btn:    #3858D0;
-      --blue-hover:  #4A68E0;
-      --text:        #ECF0FF;
-      --muted:       #7080AA;
-      --border:      rgba(255,255,255,0.14);
-      --input-bg:    rgba(255,255,255,0.05);
-      --divider:     rgba(255,255,255,0.07);
-      --note-color:  rgba(255,255,255,0.28);
-      --toggle-bg:   rgba(255,255,255,0.07);
-      --toggle-ico:  rgba(255,255,255,0.45);
-      --garamond:    'EB Garamond', Georgia, serif;
-      --serif:       'Roboto Serif', Georgia, serif;
+      --bg-right:   #0B0E14;
+      --blue:       #4C6CB3;
+      --blue-hover: #5B7BC4;
+      --text:       #F0F2F8;
+      --muted:      #8A9099;
+      --border:     rgba(255,255,255,0.10);
+      --input-bg:   rgba(255,255,255,0.04);
+      --divider:    rgba(255,255,255,0.08);
+      --note:       rgba(255,255,255,0.30);
+      --toggle-bg:  rgba(255,255,255,0.06);
+      --toggle-ico: rgba(255,255,255,0.40);
+      --garamond:   'EB Garamond', Georgia, serif;
+      --inter:      'Inter', system-ui, sans-serif;
     }
 
     /* ── LIGHT ────────────────────────────────────── */
     [data-theme="light"] {
-      --bg-right:    #F5F2EC;
-      --blue:        #2E4DB5;
-      --blue-btn:    #2E4DB5;
-      --blue-hover:  #3858D0;
-      --text:        #1A1826;
-      --muted:       #78788C;
-      --border:      rgba(26,24,38,0.14);
-      --input-bg:    rgba(26,24,38,0.04);
-      --divider:     rgba(26,24,38,0.08);
-      --note-color:  rgba(26,24,38,0.3);
-      --toggle-bg:   rgba(26,24,38,0.06);
-      --toggle-ico:  rgba(26,24,38,0.45);
+      --bg-right:   #F4F1EB;
+      --blue:       #3A5799;
+      --blue-hover: #4C6CB3;
+      --text:       #0B0E14;
+      --muted:      #6B7280;
+      --border:     rgba(11,14,20,0.14);
+      --input-bg:   rgba(11,14,20,0.04);
+      --divider:    rgba(11,14,20,0.08);
+      --note:       rgba(11,14,20,0.32);
+      --toggle-bg:  rgba(11,14,20,0.06);
+      --toggle-ico: rgba(11,14,20,0.40);
     }
 
     html, body {
       height: 100%;
       background: var(--bg-right);
       color: var(--text);
-      font-family: var(--serif);
+      font-family: var(--inter);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* ── SPLIT LAYOUT ─────────────────────────────── */
+    /* ── GRID ─────────────────────────────────────── */
     .split {
       display: grid;
-      grid-template-columns: 47.5fr 52.5fr; /* form left (narrower), photo right (wider) */
+      grid-template-columns: 54fr 46fr;
       min-height: 100vh;
     }
 
-    /* ── RIGHT PANEL: form (appears LEFT in grid col 1) ── */
+    /* ── LEFT PANEL: photo ────────────────────────── */
+    .panel-left {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2rem 2.5rem;
+
+      /*
+       * ── ADD YOUR PHOTO ───────────────────────────────
+       * Recommended: 2800 × 1800 px  |  Min: 1400 × 900 px
+       * Format: JPEG, ≤ 500 KB. Keep subject centred.
+       *
+       * Uncomment and rename:
+       * background-image: url('photo.jpg');
+       * background-position: center;
+       * ─────────────────────────────────────────────────
+       */
+      background-size: cover;
+      background:
+        radial-gradient(ellipse 120% 55% at 25% 10%, rgba(18,30,72,0.80) 0%, transparent 60%),
+        radial-gradient(ellipse 70%  70% at 85% 85%, rgba(6,10,28,0.95)  0%, transparent 60%),
+        radial-gradient(ellipse 80%  45% at 5%  95%, rgba(55,32,8,0.42)  0%, transparent 65%),
+        #060810;
+    }
+
+    /* film grain */
+    .panel-left::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      opacity: 0.45;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* warm bokeh */
+    .bokeh {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        radial-gradient(circle 100px at 75% 12%, rgba(255,195,90,0.11)  0%, transparent 70%),
+        radial-gradient(circle 55px  at 87% 27%, rgba(255,175,60,0.09)  0%, transparent 60%),
+        radial-gradient(circle 145px at 14% 86%, rgba(255,150,50,0.08)  0%, transparent 68%),
+        radial-gradient(circle 40px  at 52% 90%, rgba(80,130,255,0.08)  0%, transparent 55%),
+        radial-gradient(circle 30px  at 30% 70%, rgba(255,205,120,0.06) 0%, transparent 50%);
+    }
+
+    /* vignette — ensures text legibility over photo */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgba(4,6,14,0.96) 0%,
+        rgba(4,6,14,0.65) 28%,
+        rgba(4,6,14,0.18) 58%,
+        transparent 100%
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .logo {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--inter);
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      color: rgba(255,255,255,0.82);
+      opacity: 0;
+      animation: up 0.6s ease forwards;
+    }
+
+    .logo-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #4C6CB3;
+      flex-shrink: 0;
+    }
+
+    .left-copy {
+      position: relative;
+      z-index: 3;
+    }
+
+    .headline {
+      font-family: var(--garamond);
+      font-size: clamp(2.2rem, 3.6vw, 3rem);
+      font-weight: 400;
+      line-height: 1.12;
+      letter-spacing: -0.01em;
+      color: #F0F2F8;
+      margin-bottom: 0.75rem;
+      opacity: 0;
+      animation: up 0.7s ease 0.1s forwards;
+    }
+
+    .tagline {
+      font-family: var(--inter);
+      font-size: 0.95rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.5;
+      opacity: 0;
+      animation: up 0.7s ease 0.2s forwards;
+    }
+
+    .tagline em {
+      font-style: normal;
+      color: #4C6CB3;
+    }
+
+    /* ── RIGHT PANEL: form ────────────────────────── */
     .panel-right {
       background: var(--bg-right);
-      border-right: 1px solid var(--divider);
+      border-left: 1px solid var(--divider);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -96,8 +215,8 @@
       z-index: 10;
     }
     .toggle-btn:hover {
-      background: rgba(74,114,232,0.12);
-      border-color: rgba(74,114,232,0.3);
+      background: rgba(76,108,179,0.15);
+      border-color: rgba(76,108,179,0.35);
       color: var(--blue);
     }
 
@@ -106,46 +225,35 @@
     [data-theme="light"] .icon-sun  { display: block; }
     [data-theme="light"] .icon-moon { display: none; }
 
-    /* ── FORM CONTENT ─────────────────────────────── */
+    /* ── FORM WRAP ────────────────────────────────── */
     .form-wrap {
       width: 100%;
-      max-width: 400px;
-    }
-
-    .eyebrow {
-      font-family: var(--serif);
-      font-size: 0.63rem;
-      font-weight: 500;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--blue);
-      margin-bottom: 1.5rem;
-      opacity: 0;
-      animation: up 0.65s ease 0.1s forwards;
+      max-width: 420px;
+      margin-top: -3vh; /* nudge above geometric centre to match mockup */
     }
 
     .form-title {
       font-family: var(--garamond);
-      font-size: clamp(2rem, 2.85vw, 2.6rem);
+      font-size: clamp(2.2rem, 2.8vw, 2.65rem); /* ≈ 36px H2 per type scale */
       font-weight: 400;
-      line-height: 1.05;
-      letter-spacing: -0.015em;
+      line-height: 1.06;
+      letter-spacing: -0.012em;
       color: var(--text);
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.3rem;
       opacity: 0;
-      animation: up 0.65s ease 0.2s forwards;
+      animation: up 0.65s ease 0.15s forwards;
       transition: color 0.35s;
     }
 
     .form-sub {
-      font-family: var(--serif);
-      font-size: 1.02rem;
-      font-weight: 300;
+      font-family: var(--garamond);
+      font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+      font-weight: 400;
       color: var(--muted);
-      line-height: 1.5;
-      margin-bottom: 3.25rem;
+      line-height: 1.4;
+      margin-bottom: 2.5rem;
       opacity: 0;
-      animation: up 0.65s ease 0.3s forwards;
+      animation: up 0.65s ease 0.25s forwards;
       transition: color 0.35s;
     }
 
@@ -153,23 +261,23 @@
     .form {
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
+      gap: 0.6rem;
       opacity: 0;
-      animation: up 0.65s ease 0.4s forwards;
+      animation: up 0.65s ease 0.35s forwards;
     }
 
     .field { position: relative; }
 
     .field input {
       width: 100%;
-      padding: 1rem 3rem 1rem 1.05rem;
+      padding: 0.95rem 2.8rem 0.95rem 1rem;
       background: var(--input-bg);
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 6px;
       color: var(--text);
-      font-family: var(--serif);
-      font-size: 0.88rem;
-      font-weight: 300;
+      font-family: var(--inter);
+      font-size: 0.9rem;
+      font-weight: 400;
       outline: none;
       transition: border-color 0.18s, background 0.18s, color 0.35s;
       caret-color: var(--blue);
@@ -177,139 +285,102 @@
 
     .field input::placeholder {
       color: var(--muted);
-      opacity: 0.55;
-      font-weight: 300;
+      font-size: 0.88rem;
     }
 
     .field input:focus {
-      border-color: rgba(74,114,232,0.5);
-      background: rgba(74,114,232,0.04);
-    }
-
-    [data-theme="light"] .field input:focus {
-      background: rgba(46,77,181,0.04);
-    }
-
-    [data-theme="light"] .btn-fallback {
-      background: rgba(26,24,38,0.09);
-      color: #1A1826;
-      border: 1px solid rgba(26,24,38,0.18);
-    }
-
-    [data-theme="light"] .btn-fallback:hover {
-      background: rgba(26,24,38,0.14);
+      border-color: rgba(76,108,179,0.55);
+      background: rgba(76,108,179,0.05);
     }
 
     .field-icon {
       position: absolute;
-      right: 1rem; top: 50%;
+      right: 0.9rem; top: 50%;
       transform: translateY(-50%);
       color: var(--muted);
-      opacity: 0.45;
+      opacity: 0.5;
       pointer-events: none;
       transition: opacity 0.18s;
     }
 
-    .field:focus-within .field-icon { opacity: 0.75; }
+    .field:focus-within .field-icon { opacity: 0.8; }
 
     /* ── T&C CHECKBOX ─────────────────────────────── */
     .terms-row {
       display: flex;
       align-items: flex-start;
-      gap: 0.6rem;
-      margin-top: 0.15rem;
+      gap: 0.55rem;
+      margin-top: 0.1rem;
     }
 
     .terms-row input[type="checkbox"] {
       width: 14px; height: 14px;
-      margin-top: 0.2rem;
+      margin-top: 0.18rem;
       accent-color: var(--blue);
       flex-shrink: 0;
       cursor: pointer;
     }
 
     .terms-label {
-      font-family: var(--serif);
+      font-family: var(--inter);
       font-size: 0.73rem;
-      font-weight: 300;
+      font-weight: 400;
       color: var(--muted);
       line-height: 1.55;
       cursor: pointer;
-      transition: color 0.35s;
     }
 
-    .terms-label a {
-      color: var(--blue);
-      text-decoration: none;
-    }
-
+    .terms-label a { color: var(--blue); text-decoration: none; }
     .terms-label a:hover { text-decoration: underline; }
 
     .terms-error {
-      font-family: var(--serif);
+      font-family: var(--inter);
       font-size: 0.71rem;
-      color: #D0615A;
+      color: #C0504A;
       display: none;
-      margin-top: -0.2rem;
-      padding-left: 1.6rem;
+      margin-top: -0.15rem;
+      padding-left: 1.55rem;
     }
 
     .terms-error.show { display: block; }
 
-    /* ── GLASS BUTTON WRAP ───────────────────────── */
-    .glass-btn-wrap {
-      display: flex;
-      justify-content: center;
-      margin-top: 0.6rem;
-      min-height: 52px;
-    }
-
-    .glass-button-text {
-      font-family: var(--serif) !important;
-      font-size: 0.92rem !important;
-      font-weight: 400 !important;
-      letter-spacing: 0.01em !important;
-      color: rgba(255,255,255,0.92) !important;
-    }
-
-    .glass-button {
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
-    }
-
-    .btn-fallback {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.9rem 2.5rem;
-      background: var(--blue-btn);
+    /* ── CTA BUTTON ───────────────────────────────── */
+    .cta-btn {
+      width: 100%;
+      padding: 1.05rem 1.5rem;
+      background: var(--blue);
       border: none;
-      border-radius: 50px;
+      border-radius: 6px;
       color: #fff;
-      font-family: var(--serif);
-      font-size: 0.92rem;
-      font-weight: 400;
+      font-family: var(--inter);
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       cursor: pointer;
       transition: background 0.18s;
+      margin-top: 0.55rem;
     }
 
-    .btn-fallback:hover { background: var(--blue-hover); }
+    .cta-btn:hover { background: var(--blue-hover); }
 
+    [data-theme="light"] .cta-btn { color: #fff; }
+
+    /* ── NOTE ─────────────────────────────────────── */
     .note {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.4rem;
-      margin-top: 1.1rem;
-      font-family: var(--serif);
-      font-size: 0.75rem;
-      font-weight: 300;
-      color: var(--note-color);
+      margin-top: 1rem;
+      font-family: var(--inter);
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: var(--note);
       letter-spacing: 0.01em;
       transition: color 0.35s;
     }
 
-    /* ── SUCCESS STATE ────────────────────────────── */
+    /* ── SUCCESS ──────────────────────────────────── */
     .success { display: none; text-align: center; }
 
     .success.show {
@@ -319,202 +390,55 @@
     }
 
     .check-ring {
-      width: 42px; height: 42px;
+      width: 44px; height: 44px;
       border-radius: 50%;
-      background: rgba(74,114,232,0.08);
-      border: 1px solid rgba(74,114,232,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: rgba(76,108,179,0.10);
+      border: 1px solid rgba(76,108,179,0.28);
+      display: flex; align-items: center; justify-content: center;
       margin: 0 auto 1.5rem;
     }
 
     .success-title {
       font-family: var(--garamond);
-      font-size: 1.9rem;
+      font-size: 2rem;
       font-weight: 400;
       color: var(--text);
       margin-bottom: 0.55rem;
-      letter-spacing: -0.015em;
+      letter-spacing: -0.01em;
     }
 
     .success-body {
-      font-family: var(--serif);
-      font-size: 0.88rem;
-      font-weight: 300;
+      font-family: var(--inter);
+      font-size: 0.9rem;
+      font-weight: 400;
       color: var(--muted);
       line-height: 1.7;
     }
 
-    /* ── LEFT PANEL: photo (appears RIGHT in grid col 2) ── */
-    .panel-left {
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: stretch;
-      padding: 2rem 2.25rem;
-
-      /*
-       * ── ADD YOUR PHOTO ───────────────────────────────
-       * Recommended: 2800 × 1800 px  |  Min: 1400 × 900 px
-       * Format: JPEG, ≤ 500 KB. Keep subject centred.
-       *
-       * Uncomment these two lines and rename the file:
-       * background-image: url('photo.jpg');
-       * background-position: center;
-       * ─────────────────────────────────────────────────
-       */
-      background-size: cover;
-      background:
-        radial-gradient(ellipse 110% 60% at 30% 12%, rgba(22,36,88,0.75) 0%, transparent 65%),
-        radial-gradient(ellipse 60%  65% at 80% 80%, rgba(8,14,42,0.92)  0%, transparent 65%),
-        radial-gradient(ellipse 75%  40% at 8%  90%, rgba(52,30,8,0.38)  0%, transparent 70%),
-        #06080F;
-    }
-
-    /* film grain */
-    .panel-left::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
-      background-size: 220px 220px;
-      opacity: 0.5;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    /* warm bokeh */
-    .bokeh {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-      background:
-        radial-gradient(circle 95px  at 78% 14%, rgba(255,200,100,0.10) 0%, transparent 70%),
-        radial-gradient(circle 50px  at 88% 26%, rgba(255,180, 70,0.08) 0%, transparent 60%),
-        radial-gradient(circle 140px at 16% 88%, rgba(255,155, 55,0.07) 0%, transparent 70%),
-        radial-gradient(circle 38px  at 55% 91%, rgba( 90,140,255,0.08) 0%, transparent 55%),
-        radial-gradient(circle 28px  at 32% 72%, rgba(255,210,130,0.06) 0%, transparent 50%);
-    }
-
-    /* full vignette — darkens edges, keeps text readable over photo */
-    .vignette {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to top,
-        rgba(4,6,16,0.92) 0%,
-        rgba(4,6,16,0.55) 30%,
-        rgba(4,6,16,0.20) 60%,
-        transparent 100%
-      );
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .logo {
-      position: relative;
-      z-index: 3;
-      display: flex;
-      align-items: center;
-      gap: 0.38rem;
-      font-family: var(--serif);
-      font-size: 0.82rem;
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      color: rgba(255,255,255,0.85);
-      opacity: 0;
-      animation: up 0.7s ease forwards;
-    }
-
-    .logo-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #4A72E8;
-      flex-shrink: 0;
-    }
-
-    /* centred text overlay on photo */
-    .left-copy {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      z-index: 3;
-      width: 80%;
-    }
-
-    .headline {
-      font-family: var(--garamond);
-      font-size: clamp(2rem, 3.4vw, 2.8rem);
-      font-weight: 400;
-      line-height: 1.15;
-      letter-spacing: -0.01em;
-      color: #F2F5FF;
-      margin-bottom: 0.85rem;
-      opacity: 0;
-      animation: up 0.75s ease 0.15s forwards;
-    }
-
-    .tagline {
-      font-family: var(--serif);
-      font-size: 0.95rem;
-      font-weight: 300;
-      color: rgba(255,255,255,0.55);
-      opacity: 0;
-      animation: up 0.75s ease 0.28s forwards;
-    }
-
-    .tagline em {
-      font-style: normal;
-      color: #4A72E8;
-    }
-
     /* ── ANIMATIONS ───────────────────────────────── */
     @keyframes up {
-      from { opacity: 0; transform: translateY(11px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* left-copy has its own transform so override the animation start */
-    .left-copy .headline,
-    .left-copy .tagline {
-      animation-name: fade-up-copy;
-    }
-
-    @keyframes fade-up-copy {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     /* ── MOBILE ───────────────────────────────────── */
-    @media (max-width: 760px) {
+    @media (max-width: 800px) {
       .split {
         grid-template-columns: 1fr;
-        grid-template-rows: 44svh 1fr;
+        grid-template-rows: 46svh 1fr;
       }
 
-      /* photo panel on top, form below */
-      .panel-left  { order: 1; }
-      .panel-right { order: 2; border-right: none; border-top: 1px solid var(--divider); }
-
-      .panel-left { padding: 1.5rem; }
+      .panel-left  { padding: 1.5rem 1.75rem; }
 
       .panel-right {
+        border-left: none;
+        border-top: 1px solid var(--divider);
         padding: 2.5rem 1.5rem 3rem;
         align-items: flex-start;
       }
 
       .form-wrap { max-width: 100%; }
-
-      .headline { font-size: 1.85rem; }
-
-      .left-copy { width: 88%; }
-
+      .headline  { font-size: 2rem; }
       .toggle-btn { top: 1rem; right: 1.25rem; }
     }
   </style>
@@ -523,10 +447,25 @@
 
 <div class="split">
 
-  <!-- GRID COL 1 (LEFT): form ─────────────────────── -->
+  <!-- LEFT: photo ────────────────────────────────── -->
+  <div class="panel-left">
+    <div class="bokeh"></div>
+    <div class="vignette"></div>
+
+    <div class="logo">
+      projectblue <span class="logo-dot"></span>
+    </div>
+
+    <div class="left-copy">
+      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
+      <p class="tagline">Built for <em>deeper connection.</em></p>
+    </div>
+  </div>
+
+  <!-- RIGHT: form ────────────────────────────────── -->
   <div class="panel-right">
 
-    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode" title="Toggle light / dark">
+    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode">
       <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
         <path d="M12.3 9.7A5.5 5.5 0 0 1 4.3 1.7a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13 10.3a.5.5 0 0 0-.7-.6z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
       </svg>
@@ -543,8 +482,8 @@
 
       <div class="success" id="success">
         <div class="check-ring">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M2.5 8l3 3L12.5 4" stroke="#4A72E8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="#4C6CB3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <div class="success-title">You're on the list.</div>
@@ -583,9 +522,7 @@
 
       </form>
 
-      <div class="glass-btn-wrap" id="glass-btn-wrap">
-        <button class="btn-fallback" id="btn-fallback" type="button">Join the Waitlist</button>
-      </div>
+      <button class="cta-btn" id="cta-btn" type="button">Join the Waitlist</button>
 
       <p class="note">
         <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden="true">
@@ -598,26 +535,8 @@
     </div>
   </div>
 
-  <!-- GRID COL 2 (RIGHT): photo + text ───────────── -->
-  <div class="panel-left">
-    <div class="bokeh"></div>
-    <div class="vignette"></div>
-
-    <div class="logo">
-      projectblue <span class="logo-dot"></span>
-    </div>
-
-    <div class="left-copy">
-      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
-      <p class="tagline">Built for <em>deeper connection.</em></p>
-    </div>
-  </div>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="lib/container.js"></script>
-<script src="lib/button.js"></script>
 <script>
   /* ── Theme toggle ─────────────────────────────── */
   const html      = document.documentElement;
@@ -626,40 +545,20 @@
   const saved = localStorage.getItem('pb-theme');
   if (saved) html.setAttribute('data-theme', saved);
 
-  function applyThemeToButton(theme) {
-    const glassEl = wrap.querySelector('canvas, .glass-button');
-    if (!glassEl) return;
-    if (theme === 'light') {
-      glassEl.style.display = 'none';
-      fallback.style.display = '';
-    } else {
-      glassEl.style.display = '';
-      fallback.style.display = 'none';
-    }
-  }
-
   toggleBtn.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     html.setAttribute('data-theme', next);
     localStorage.setItem('pb-theme', next);
-    applyThemeToButton(next);
   });
 
   /* ── Form submission ──────────────────────────── */
   const form       = document.getElementById('form');
   const success    = document.getElementById('success');
-  const wrap       = document.getElementById('glass-btn-wrap');
-  const fallback   = document.getElementById('btn-fallback');
+  const ctaBtn     = document.getElementById('cta-btn');
   const termsCheck = document.getElementById('terms-check');
   const termsError = document.getElementById('terms-error');
 
-  let submitting  = false;
-  let glassTextEl = null;
-
-  function setLabel(text) {
-    if (glassTextEl) glassTextEl.textContent = text;
-    else fallback.textContent = text;
-  }
+  let submitting = false;
 
   async function handleSubmit() {
     if (submitting) return;
@@ -679,7 +578,8 @@
     termsError.classList.remove('show');
 
     submitting = true;
-    setLabel('Sending…');
+    ctaBtn.textContent = 'Sending…';
+    ctaBtn.disabled = true;
 
     try {
       const res = await fetch('/api/subscribe', {
@@ -694,43 +594,26 @@
 
       if (!res.ok) throw new Error();
 
-      form.style.transition = 'opacity 0.3s ease';
-      form.style.opacity = '0';
-      wrap.style.transition = 'opacity 0.3s ease';
-      wrap.style.opacity = '0';
+      [form, ctaBtn].forEach(el => {
+        el.style.transition = 'opacity 0.3s ease';
+        el.style.opacity = '0';
+      });
 
       setTimeout(() => {
         form.style.display = 'none';
-        wrap.style.display = 'none';
+        ctaBtn.style.display = 'none';
+        document.querySelector('.note').style.display = 'none';
         success.classList.add('show');
       }, 300);
 
     } catch {
       submitting = false;
-      setLabel('Join the Waitlist');
+      ctaBtn.textContent = 'Join the Waitlist';
+      ctaBtn.disabled = false;
     }
   }
 
-  fallback.addEventListener('click', handleSubmit);
-
-  window.addEventListener('load', () => {
-    try {
-      const glassBtn = new Button({
-        text: 'Join the Waitlist',
-        size: 17,
-        type: 'pill',
-        tintOpacity: 0.28,
-        onClick: () => handleSubmit(),
-      });
-      glassTextEl = glassBtn.element.querySelector('.glass-button-text');
-      wrap.appendChild(glassBtn.element);
-      fallback.style.display = 'none';
-      /* if page loaded in light mode, keep fallback visible */
-      applyThemeToButton(html.getAttribute('data-theme'));
-    } catch (e) {
-      /* WebGL unavailable — fallback button stays */
-    }
-  });
+  ctaBtn.addEventListener('click', handleSubmit);
 </script>
 
 </body>
