@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms & Privacy — Project Blue</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234A72E8'/></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Roboto+Serif:opsz,wght@8..144,300;8..144,400;8..144,500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── DARK (default) ───────────────────────────── */
+    :root,
+    [data-theme="dark"] {
+      --bg:          #0D0F1F;
+      --bg-card:     rgba(255,255,255,0.03);
+      --blue:        #4A72E8;
+      --text:        #DCE4FF;
+      --muted:       #7080AA;
+      --border:      rgba(255,255,255,0.09);
+      --divider:     rgba(255,255,255,0.07);
+      --heading:     #F0F4FF;
+      --toggle-bg:   rgba(255,255,255,0.07);
+      --toggle-ico:  rgba(255,255,255,0.45);
+      --garamond:    'EB Garamond', Georgia, serif;
+      --serif:       'Roboto Serif', Georgia, serif;
+    }
+
+    /* ── LIGHT ────────────────────────────────────── */
+    [data-theme="light"] {
+      --bg:          #F5F2EC;
+      --bg-card:     rgba(26,24,38,0.04);
+      --blue:        #2E4DB5;
+      --text:        #2A2838;
+      --muted:       #78788C;
+      --border:      rgba(26,24,38,0.1);
+      --divider:     rgba(26,24,38,0.08);
+      --heading:     #1A1826;
+      --toggle-bg:   rgba(26,24,38,0.06);
+      --toggle-ico:  rgba(26,24,38,0.45);
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--serif);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    /* ── HEADER ───────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.75rem 2rem;
+      border-bottom: 1px solid var(--divider);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+      transition: background 0.35s, border-color 0.35s;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.38rem;
+      font-family: var(--serif);
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-link {
+      font-family: var(--serif);
+      font-size: 0.78rem;
+      font-weight: 300;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.18s;
+    }
+
+    .back-link:hover { color: var(--blue); }
+
+    .toggle-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      color: var(--toggle-ico);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .toggle-btn:hover {
+      background: rgba(74,114,232,0.12);
+      border-color: rgba(74,114,232,0.3);
+      color: var(--blue);
+    }
+
+    .icon-sun  { display: none; }
+    .icon-moon { display: block; }
+    [data-theme="light"] .icon-sun  { display: block; }
+    [data-theme="light"] .icon-moon { display: none; }
+
+    /* ── DOCUMENT LAYOUT ──────────────────────────── */
+    .doc {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 4rem 2rem 6rem;
+    }
+
+    .doc-header {
+      margin-bottom: 3.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .doc-eyebrow {
+      font-family: var(--serif);
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 1rem;
+    }
+
+    .doc-title {
+      font-family: var(--garamond);
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--heading);
+      margin-bottom: 0.75rem;
+      transition: color 0.35s;
+    }
+
+    .doc-meta {
+      font-family: var(--serif);
+      font-size: 0.78rem;
+      font-weight: 300;
+      color: var(--muted);
+      transition: color 0.35s;
+    }
+
+    /* ── SECTIONS ─────────────────────────────────── */
+    .section {
+      margin-bottom: 3rem;
+    }
+
+    .section:last-child { margin-bottom: 0; }
+
+    .section-label {
+      font-family: var(--serif);
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 0.65rem;
+      opacity: 0.8;
+    }
+
+    .section h2 {
+      font-family: var(--garamond);
+      font-size: 1.45rem;
+      font-weight: 400;
+      color: var(--heading);
+      margin-bottom: 1rem;
+      letter-spacing: -0.005em;
+      transition: color 0.35s;
+    }
+
+    .section p {
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--text);
+      line-height: 1.8;
+      margin-bottom: 0.85rem;
+      transition: color 0.35s;
+    }
+
+    .section p:last-child { margin-bottom: 0; }
+
+    .section ul {
+      list-style: none;
+      margin: 0.5rem 0 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .section ul li {
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--text);
+      line-height: 1.6;
+      padding-left: 1.1rem;
+      position: relative;
+      transition: color 0.35s;
+    }
+
+    .section ul li::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      color: var(--blue);
+      font-weight: 400;
+    }
+
+    .highlight-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0;
+      transition: background 0.35s, border-color 0.35s;
+    }
+
+    .highlight-box p {
+      font-size: 0.85rem;
+      margin-bottom: 0;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--divider);
+      margin: 2.5rem 0;
+      transition: border-color 0.35s;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    /* ── FOOTER ───────────────────────────────────── */
+    .doc-footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--divider);
+      transition: border-color 0.35s;
+    }
+
+    .doc-footer p {
+      font-family: var(--serif);
+      font-size: 0.78rem;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.7;
+      transition: color 0.35s;
+    }
+
+    /* ── MOBILE ───────────────────────────────────── */
+    @media (max-width: 600px) {
+      .site-header { padding: 1.25rem 1.25rem; }
+      .doc { padding: 2.5rem 1.25rem 4rem; }
+      .doc-title { font-size: 1.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="logo" href="index.html">
+    projectblue <span class="logo-dot"></span>
+  </a>
+  <div class="header-right">
+    <a class="back-link" href="index.html">← Back</a>
+    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode">
+      <svg class="icon-moon" width="13" height="13" viewBox="0 0 14 14" fill="none">
+        <path d="M12.3 9.7A5.5 5.5 0 0 1 4.3 1.7a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13 10.3a.5.5 0 0 0-.7-.6z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+      <svg class="icon-sun" width="13" height="13" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="2.6" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M7 1.2V2.8M7 11.2V12.8M1.2 7H2.8M11.2 7H12.8M3.1 3.1l1.1 1.1M9.8 9.8l1.1 1.1M10.9 3.1l-1.1 1.1M4.2 9.8l-1.1 1.1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main class="doc">
+
+  <div class="doc-header">
+    <p class="doc-eyebrow">Legal</p>
+    <h1 class="doc-title">Terms &amp; Privacy</h1>
+    <p class="doc-meta">Last updated: May 13, 2026</p>
+  </div>
+
+  <!-- Introduction -->
+  <div class="section">
+    <p class="section-label">Introduction</p>
+    <h2>About this document</h2>
+    <p>These Terms &amp; Conditions and Privacy Policy govern your use of the Project Blue waitlist service. By submitting your information, you confirm that you have read and agree to the terms described here. This document is kept simple and plain — no legal maze, just clarity.</p>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Terms of Service -->
+  <div class="section">
+    <p class="section-label">Section 1</p>
+    <h2>Terms of Service</h2>
+    <p>Project Blue is an early-access music synchronisation service currently in development. By joining the waitlist, you are expressing interest in the product — this does not constitute a purchase, contract, or guarantee of access.</p>
+    <p>You agree to:</p>
+    <ul>
+      <li>Provide accurate information when signing up</li>
+      <li>Not share, sell, or misrepresent your position on the waitlist</li>
+      <li>Understand that features, availability, and timelines may change</li>
+    </ul>
+    <p>Project Blue reserves the right to remove any entry from the waitlist at its discretion, including for suspected abuse or fraudulent submissions.</p>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Privacy Policy -->
+  <div class="section" id="privacy">
+    <p class="section-label">Section 2</p>
+    <h2>Privacy Policy</h2>
+    <p>Your privacy matters. Here is exactly what we collect and why.</p>
+
+    <div class="highlight-box">
+      <p><strong>We do not sell your data.</strong> Full stop. Your information is used only to manage the waitlist and contact you about Project Blue.</p>
+    </div>
+
+    <p>When you join the waitlist, we collect:</p>
+    <ul>
+      <li>Email address (if provided)</li>
+      <li>Phone number (if provided)</li>
+      <li>Timestamp of submission</li>
+      <li>Country/region (inferred from IP for legal compliance — not stored persistently)</li>
+    </ul>
+
+    <p>We use this information to:</p>
+    <ul>
+      <li>Send you a confirmation of your waitlist position</li>
+      <li>Notify you when early access becomes available</li>
+      <li>Send product updates (infrequent — we respect your inbox)</li>
+    </ul>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Data Usage -->
+  <div class="section" id="data">
+    <p class="section-label">Section 3</p>
+    <h2>Data Storage &amp; Usage</h2>
+    <p>Your contact information is stored in Resend, our email delivery provider. Resend is GDPR-compliant and SOC 2 Type II certified. You can review their privacy policy at <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">resend.com/legal/privacy-policy</a>.</p>
+    <p>We retain your data until:</p>
+    <ul>
+      <li>You request deletion (see below)</li>
+      <li>Project Blue launches and you are migrated to a full account</li>
+      <li>The waitlist is closed</li>
+    </ul>
+    <p>We do not use third-party advertising networks, analytics trackers, or social media pixels. The only data processor we use is Resend for email delivery.</p>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Your Rights -->
+  <div class="section" id="rights">
+    <p class="section-label">Section 4</p>
+    <h2>Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li><strong>Access</strong> — request a copy of the data we hold about you</li>
+      <li><strong>Correction</strong> — ask us to fix inaccurate information</li>
+      <li><strong>Deletion</strong> — request that your data be permanently removed</li>
+      <li><strong>Withdrawal</strong> — withdraw consent at any time by contacting us</li>
+    </ul>
+    <p>All requests will be handled within 30 days. For users in the EU or UK, these rights are guaranteed under GDPR and UK GDPR respectively.</p>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Contact -->
+  <div class="section" id="contact">
+    <p class="section-label">Section 5</p>
+    <h2>Contact</h2>
+    <p>For any questions about these terms, data requests, or to be removed from the waitlist:</p>
+    <div class="highlight-box">
+      <p>Email: <a href="mailto:hello@projectblue.cc">hello@projectblue.cc</a><br>We aim to respond within 2 business days.</p>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    <p>Project Blue is an independent product. These terms were last updated on May 13, 2026. We will notify waitlist members of any material changes via email before they take effect.<br><br><a href="index.html">← Back to projectblue</a></p>
+  </div>
+
+</main>
+
+<script>
+  const html      = document.documentElement;
+  const toggleBtn = document.getElementById('toggle-btn');
+
+  const saved = localStorage.getItem('pb-theme');
+  if (saved) html.setAttribute('data-theme', saved);
+
+  toggleBtn.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('pb-theme', next);
+  });
+</script>
+
+</body>
+</html>

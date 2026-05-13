@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,26 +10,49 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Roboto+Serif:opsz,wght@8..144,300;8..144,400;8..144,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="lib/glass.css" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg-right:   #0D0F1F;
-      --blue:       #4A72E8;
-      --blue-btn:   #3858D0;
-      --blue-hover: #4A68E0;
-      --text:       #ECF0FF;
-      --muted:      #7080AA;
-      --border:     rgba(255,255,255,0.14);
-      --input-bg:   rgba(255,255,255,0.05);
-      --garamond:   'EB Garamond', Georgia, serif;
-      --serif:      'Roboto Serif', Georgia, serif;
+    /* ── DARK (default) ───────────────────────────── */
+    :root,
+    [data-theme="dark"] {
+      --bg-right:    #0D0F1F;
+      --blue:        #4A72E8;
+      --blue-btn:    #3858D0;
+      --blue-hover:  #4A68E0;
+      --text:        #ECF0FF;
+      --muted:       #7080AA;
+      --border:      rgba(255,255,255,0.14);
+      --input-bg:    rgba(255,255,255,0.05);
+      --divider:     rgba(255,255,255,0.07);
+      --note-color:  rgba(255,255,255,0.28);
+      --toggle-bg:   rgba(255,255,255,0.07);
+      --toggle-ico:  rgba(255,255,255,0.45);
+      --garamond:    'EB Garamond', Georgia, serif;
+      --serif:       'Roboto Serif', Georgia, serif;
+    }
+
+    /* ── LIGHT ────────────────────────────────────── */
+    [data-theme="light"] {
+      --bg-right:    #F5F2EC;
+      --blue:        #2E4DB5;
+      --blue-btn:    #2E4DB5;
+      --blue-hover:  #3858D0;
+      --text:        #1A1826;
+      --muted:       #78788C;
+      --border:      rgba(26,24,38,0.14);
+      --input-bg:    rgba(26,24,38,0.04);
+      --divider:     rgba(26,24,38,0.08);
+      --note-color:  rgba(26,24,38,0.3);
+      --toggle-bg:   rgba(26,24,38,0.06);
+      --toggle-ico:  rgba(26,24,38,0.45);
     }
 
     html, body {
       height: 100%;
-      background: #08091A;
+      background: var(--bg-right);
       color: var(--text);
       font-family: var(--serif);
       -webkit-font-smoothing: antialiased;
@@ -37,34 +60,37 @@
     }
 
     /* ── SPLIT LAYOUT ─────────────────────────────── */
-
     .split {
       display: grid;
       grid-template-columns: 52.5fr 47.5fr;
       min-height: 100vh;
     }
 
-    /* ── LEFT PANEL ───────────────────────────────── */
-
+    /* ── LEFT PANEL (photo only) ──────────────────── */
     .panel-left {
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
       padding: 2rem 2.25rem;
 
       /*
-       * ── ADD YOUR PHOTO ──────────────────────────────
+       * ── ADD YOUR PHOTO ───────────────────────────────
+       * Recommended dimensions: 2800 × 1800 px (landscape)
+       * Minimum: 1400 × 900 px  |  Format: JPEG, ≤ 500 KB
+       * Keep subject centred — CSS will crop evenly on all sides.
+       *
+       * Uncomment the two lines below and rename the file:
        * background-image: url('photo.jpg');
-       * background-size: cover;
-       * background-position: center top;
+       * background-position: center;
        * ─────────────────────────────────────────────────
        */
+      background-size: cover;
       background:
-        radial-gradient(ellipse 110% 60% at 30% 12%, rgba(22, 36, 88, 0.75) 0%, transparent 65%),
-        radial-gradient(ellipse 60% 65% at 80% 80%, rgba(8, 14, 42, 0.92) 0%, transparent 65%),
-        radial-gradient(ellipse 75% 40% at 8%  90%, rgba(52, 30, 8,  0.38) 0%, transparent 70%),
+        radial-gradient(ellipse 110% 60% at 30% 12%, rgba(22,36,88,0.75) 0%, transparent 65%),
+        radial-gradient(ellipse 60%  65% at 80% 80%, rgba(8,14,42,0.92)  0%, transparent 65%),
+        radial-gradient(ellipse 75%  40% at 8%  90%, rgba(52,30,8,0.38)  0%, transparent 70%),
         #06080F;
     }
 
@@ -80,7 +106,7 @@
       z-index: 1;
     }
 
-    /* warm bokeh — city lights, fairy lights */
+    /* bokeh warmth */
     .bokeh {
       position: absolute;
       inset: 0;
@@ -91,22 +117,22 @@
         radial-gradient(circle 50px  at 88% 26%, rgba(255,180, 70,0.08) 0%, transparent 60%),
         radial-gradient(circle 140px at 16% 88%, rgba(255,155, 55,0.07) 0%, transparent 70%),
         radial-gradient(circle 38px  at 55% 91%, rgba( 90,140,255,0.08) 0%, transparent 55%),
-        radial-gradient(circle 28px  at 32% 72%, rgba(255,210,130,0.06) 0%, transparent 50%),
-        radial-gradient(circle 22px  at 65% 82%, rgba(255,200, 90,0.05) 0%, transparent 50%);
+        radial-gradient(circle 28px  at 32% 72%, rgba(255,210,130,0.06) 0%, transparent 50%);
     }
 
-    /* vignette — makes text readable over photo */
+    /* bottom vignette — keeps logo readable over photo */
     .vignette {
       position: absolute;
       inset: 0;
       background: linear-gradient(
-        to top,
-        rgba(4, 6, 16, 0.98) 0%,
-        rgba(4, 6, 16, 0.70) 30%,
-        rgba(4, 6, 16, 0.20) 60%,
-        transparent 100%
+        to bottom,
+        rgba(4,6,16,0.55) 0%,
+        transparent 35%,
+        transparent 65%,
+        rgba(4,6,16,0.80) 100%
       );
       z-index: 2;
+      pointer-events: none;
     }
 
     .logo {
@@ -127,34 +153,90 @@
     .logo-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--blue);
+      background: #4A72E8;
       flex-shrink: 0;
     }
 
-    .left-copy {
+    /* ── RIGHT PANEL ──────────────────────────────── */
+    .panel-right {
+      background: var(--bg-right);
+      border-left: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 3.5rem;
       position: relative;
-      z-index: 3;
+      transition: background 0.35s ease, border-color 0.35s ease;
+    }
+
+    /* ── THEME TOGGLE ─────────────────────────────── */
+    .toggle-btn {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.75rem;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--toggle-bg);
+      border: 1px solid var(--border);
+      color: var(--toggle-ico);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      z-index: 10;
+    }
+    .toggle-btn:hover {
+      background: rgba(74,114,232,0.12);
+      border-color: rgba(74,114,232,0.3);
+      color: #4A72E8;
+    }
+
+    .icon-sun  { display: none; }
+    .icon-moon { display: block; }
+    [data-theme="light"] .icon-sun  { display: block; }
+    [data-theme="light"] .icon-moon { display: none; }
+
+    /* ── FORM WRAP ────────────────────────────────── */
+    .form-wrap {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .eyebrow {
+      font-family: var(--serif);
+      font-size: 0.63rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 1.1rem;
+      opacity: 0;
+      animation: up 0.65s ease 0.1s forwards;
     }
 
     .headline {
       font-family: var(--garamond);
-      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      font-size: clamp(1.9rem, 2.6vw, 2.55rem);
       font-weight: 400;
-      line-height: 1.15;
+      line-height: 1.12;
       letter-spacing: -0.01em;
-      color: #F2F5FF;
-      margin-bottom: 0.85rem;
+      color: var(--text);
+      margin-bottom: 0.65rem;
       opacity: 0;
-      animation: up 0.75s ease 0.1s forwards;
+      animation: up 0.65s ease 0.2s forwards;
+      transition: color 0.35s;
     }
 
     .tagline {
       font-family: var(--serif);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 300;
-      color: rgba(255,255,255,0.55);
+      color: var(--muted);
+      margin-bottom: 2.75rem;
       opacity: 0;
-      animation: up 0.75s ease 0.2s forwards;
+      animation: up 0.65s ease 0.3s forwards;
+      transition: color 0.35s;
     }
 
     .tagline em {
@@ -162,66 +244,13 @@
       color: var(--blue);
     }
 
-    /* ── RIGHT PANEL ──────────────────────────────── */
-
-    .panel-right {
-      background: var(--bg-right);
-      border-left: 1px solid rgba(255,255,255,0.07);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3rem 3.5rem;
-    }
-
-    .form-wrap {
-      width: 100%;
-      max-width: 400px;
-      margin-top: 6vh;
-    }
-
-    .eyebrow {
-      font-family: var(--serif);
-      font-size: 0.65rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--blue);
-      margin-bottom: 1.5rem;
-      opacity: 0;
-      animation: up 0.65s ease 0.15s forwards;
-    }
-
-    .form-title {
-      font-family: var(--garamond);
-      font-size: clamp(2rem, 2.85vw, 2.6rem);
-      font-weight: 400;
-      line-height: 1.05;
-      letter-spacing: -0.015em;
-      color: #F0F4FF;
-      margin-bottom: 0.45rem;
-      opacity: 0;
-      animation: up 0.65s ease 0.25s forwards;
-    }
-
-    .form-sub {
-      font-family: var(--serif);
-      font-size: 1.05rem;
-      font-weight: 300;
-      color: var(--muted);
-      line-height: 1.5;
-      margin-bottom: 3.5rem;
-      opacity: 0;
-      animation: up 0.65s ease 0.35s forwards;
-    }
-
     /* ── FORM FIELDS ──────────────────────────────── */
-
     .form {
       display: flex;
       flex-direction: column;
       gap: 0.65rem;
       opacity: 0;
-      animation: up 0.65s ease 0.45s forwards;
+      animation: up 0.65s ease 0.4s forwards;
     }
 
     .field {
@@ -239,18 +268,23 @@
       font-size: 0.88rem;
       font-weight: 300;
       outline: none;
-      transition: border-color 0.18s ease, background 0.18s ease;
+      transition: border-color 0.18s, background 0.18s, color 0.35s;
       caret-color: var(--blue);
     }
 
     .field input::placeholder {
-      color: rgba(255,255,255,0.22);
+      color: var(--muted);
+      opacity: 0.5;
       font-weight: 300;
     }
 
     .field input:focus {
-      border-color: rgba(74,114,232,0.55);
+      border-color: rgba(74,114,232,0.5);
       background: rgba(74,114,232,0.04);
+    }
+
+    [data-theme="light"] .field input:focus {
+      background: rgba(46,77,181,0.04);
     }
 
     .field-icon {
@@ -258,25 +292,66 @@
       right: 1rem;
       top: 50%;
       transform: translateY(-50%);
-      color: rgba(255,255,255,0.18);
+      color: var(--muted);
+      opacity: 0.45;
       pointer-events: none;
-      transition: color 0.18s;
+      transition: opacity 0.18s;
     }
 
-    .field:focus-within .field-icon {
-      color: rgba(74,114,232,0.4);
+    .field:focus-within .field-icon { opacity: 0.75; }
+
+    /* ── T&C CHECKBOX ─────────────────────────────── */
+    .terms-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      margin-top: 0.15rem;
     }
+
+    .terms-row input[type="checkbox"] {
+      width: 14px; height: 14px;
+      margin-top: 0.2rem;
+      accent-color: var(--blue);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .terms-label {
+      font-family: var(--serif);
+      font-size: 0.73rem;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.55;
+      cursor: pointer;
+      transition: color 0.35s;
+    }
+
+    .terms-label a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    .terms-label a:hover { text-decoration: underline; }
+
+    .terms-error {
+      font-family: var(--serif);
+      font-size: 0.71rem;
+      color: #D0615A;
+      display: none;
+      margin-top: -0.2rem;
+      padding-left: 1.6rem;
+    }
+
+    .terms-error.show { display: block; }
 
     /* ── GLASS BUTTON WRAP ───────────────────────── */
-
     .glass-btn-wrap {
       display: flex;
       justify-content: center;
-      margin-top: 0.55rem;
+      margin-top: 0.6rem;
       min-height: 52px;
     }
 
-    /* override library defaults to match our type palette */
     .glass-button-text {
       font-family: var(--serif) !important;
       font-size: 0.92rem !important;
@@ -289,7 +364,6 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
     }
 
-    /* fallback shown before JS initialises the glass button */
     .btn-fallback {
       display: flex;
       align-items: center;
@@ -306,6 +380,7 @@
       cursor: pointer;
       transition: background 0.18s;
     }
+
     .btn-fallback:hover { background: var(--blue-hover); }
 
     .note {
@@ -315,14 +390,14 @@
       gap: 0.4rem;
       margin-top: 1.1rem;
       font-family: var(--serif);
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       font-weight: 300;
-      color: rgba(255,255,255,0.22);
+      color: var(--note-color);
       letter-spacing: 0.01em;
+      transition: color 0.35s;
     }
 
-    /* ── SUCCESS ──────────────────────────────────── */
-
+    /* ── SUCCESS STATE ────────────────────────────── */
     .success {
       display: none;
       text-align: center;
@@ -349,7 +424,7 @@
       font-family: var(--garamond);
       font-size: 1.9rem;
       font-weight: 400;
-      color: #F0F4FF;
+      color: var(--text);
       margin-bottom: 0.55rem;
       letter-spacing: -0.015em;
     }
@@ -362,33 +437,36 @@
       line-height: 1.7;
     }
 
-    /* ── ANIMATION ────────────────────────────────── */
-
+    /* ── ANIMATIONS ───────────────────────────────── */
     @keyframes up {
       from { opacity: 0; transform: translateY(11px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     /* ── MOBILE ───────────────────────────────────── */
-
     @media (max-width: 760px) {
       .split {
         grid-template-columns: 1fr;
-        grid-template-rows: 48svh 1fr;
+        grid-template-rows: 44svh 1fr;
       }
 
       .panel-left { padding: 1.5rem; }
 
-      .headline { font-size: 1.85rem; }
-
       .panel-right {
         border-left: none;
-        border-top: 1px solid rgba(255,255,255,0.06);
-        padding: 2.25rem 1.5rem 3rem;
+        border-top: 1px solid var(--divider);
+        padding: 2.5rem 1.5rem 3rem;
         align-items: flex-start;
       }
 
       .form-wrap { max-width: 100%; }
+
+      .headline { font-size: 1.75rem; }
+
+      .toggle-btn {
+        top: 1.1rem;
+        right: 1.25rem;
+      }
     }
   </style>
 </head>
@@ -396,7 +474,7 @@
 
 <div class="split">
 
-  <!-- LEFT ─────────────────────────────────────── -->
+  <!-- LEFT: photo ────────────────────────────────── -->
   <div class="panel-left">
     <div class="bokeh"></div>
     <div class="vignette"></div>
@@ -404,20 +482,28 @@
     <div class="logo">
       projectblue <span class="logo-dot"></span>
     </div>
-
-    <div class="left-copy">
-      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
-      <p class="tagline">Built for <em>deeper connection.</em></p>
-    </div>
   </div>
 
-  <!-- RIGHT ────────────────────────────────────── -->
+  <!-- RIGHT: words + form ─────────────────────────── -->
   <div class="panel-right">
+
+    <button class="toggle-btn" id="toggle-btn" aria-label="Toggle colour mode" title="Toggle light/dark mode">
+      <!-- moon (shown in dark mode) -->
+      <svg class="icon-moon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M12.3 9.7A5.5 5.5 0 0 1 4.3 1.7a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13 10.3a.5.5 0 0 0-.7-.6z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- sun (shown in light mode) -->
+      <svg class="icon-sun" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="2.6" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M7 1.2V2.8M7 11.2V12.8M1.2 7H2.8M11.2 7H12.8M3.1 3.1l1.1 1.1M9.8 9.8l1.1 1.1M10.9 3.1l-1.1 1.1M4.2 9.8l-1.1 1.1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+    </button>
+
     <div class="form-wrap">
 
       <p class="eyebrow">Early Access</p>
-      <h2 class="form-title">Create a room.</h2>
-      <p class="form-sub">Invite someone. Stay in sync.</p>
+      <h1 class="headline">Listen together—<br>even when you're apart.</h1>
+      <p class="tagline">Built for <em>deeper connection.</em></p>
 
       <div class="success" id="success">
         <div class="check-ring">
@@ -433,7 +519,7 @@
 
         <div class="field">
           <input type="email" name="email" placeholder="Email address" autocomplete="email" inputmode="email" />
-          <span class="field-icon">
+          <span class="field-icon" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <rect x="1" y="3" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.1"/>
               <path d="M1 5l6.5 4.5L14 5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
@@ -443,22 +529,30 @@
 
         <div class="field">
           <input type="tel" name="phone" placeholder="Phone number (optional)" autocomplete="tel" inputmode="tel" />
-          <span class="field-icon">
+          <span class="field-icon" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <path d="M5 2h1.6l.9 2.8-1.35 1c.72 1.5 2 2.78 3.5 3.5l1-1.35 2.8.9V10.5c0 1-.7 1.4-1.6 1.2C5.4 10.2 2.8 7.6 2.3 3.6 2.1 2.7 2.5 2 3.4 2H5z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
         </div>
 
+        <div class="terms-row">
+          <input type="checkbox" id="terms-check" />
+          <label class="terms-label" for="terms-check">
+            I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+            and <a href="terms.html#privacy" target="_blank" rel="noopener">Privacy Policy</a>
+          </label>
+        </div>
+        <p class="terms-error" id="terms-error">Please agree to the terms to continue.</p>
+
       </form>
 
-      <!-- liquid glass CTA — created by JS; fallback shown until ready -->
       <div class="glass-btn-wrap" id="glass-btn-wrap">
         <button class="btn-fallback" id="btn-fallback" type="button">Reserve my room →</button>
       </div>
 
       <p class="note">
-        <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
+        <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden="true">
           <rect x="0.75" y="4.75" width="8.5" height="6.5" rx="1.25" stroke="currentColor" stroke-width="1.05"/>
           <path d="M3 4.75V3.25a2 2 0 0 1 4 0v1.5" stroke="currentColor" stroke-width="1.05" stroke-linecap="round"/>
         </svg>
@@ -474,18 +568,26 @@
 <script src="lib/container.js"></script>
 <script src="lib/button.js"></script>
 <script>
-  /*
-   * FORMSPREE SETUP (~2 min):
-   * 1. formspree.io → free account → New Form
-   * 2. Copy the 8-char ID from the endpoint URL
-   * 3. Paste below replacing YOUR_FORM_ID
-   */
-  const FORMSPREE_ID = 'YOUR_FORM_ID';
+  /* ── Theme toggle ─────────────────────────────── */
+  const html      = document.documentElement;
+  const toggleBtn = document.getElementById('toggle-btn');
 
-  const form      = document.getElementById('form');
-  const success   = document.getElementById('success');
-  const wrap      = document.getElementById('glass-btn-wrap');
-  const fallback  = document.getElementById('btn-fallback');
+  const saved = localStorage.getItem('pb-theme');
+  if (saved) html.setAttribute('data-theme', saved);
+
+  toggleBtn.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('pb-theme', next);
+  });
+
+  /* ── Form submission ──────────────────────────── */
+  const form       = document.getElementById('form');
+  const success    = document.getElementById('success');
+  const wrap       = document.getElementById('glass-btn-wrap');
+  const fallback   = document.getElementById('btn-fallback');
+  const termsCheck = document.getElementById('terms-check');
+  const termsError = document.getElementById('terms-error');
 
   let submitting  = false;
   let glassTextEl = null;
@@ -506,14 +608,24 @@
       return;
     }
 
+    if (!termsCheck.checked) {
+      termsError.classList.add('show');
+      return;
+    }
+    termsError.classList.remove('show');
+
     submitting = true;
     setLabel('Sending…');
 
     try {
-      const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+      const res = await fetch('/api/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ email: email || undefined, phone: phone || undefined }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email || undefined,
+          phone: phone || undefined,
+          terms: true,
+        }),
       });
 
       if (!res.ok) throw new Error();
@@ -535,10 +647,8 @@
     }
   }
 
-  /* fallback click (before glass button loads) */
   fallback.addEventListener('click', handleSubmit);
 
-  /* initialise liquid glass button once all scripts are ready */
   window.addEventListener('load', () => {
     try {
       const glassBtn = new Button({
@@ -548,11 +658,7 @@
         tintOpacity: 0.28,
         onClick: () => handleSubmit(),
       });
-
-      /* grab the text node so we can update it */
       glassTextEl = glassBtn.element.querySelector('.glass-button-text');
-
-      /* swap out the fallback */
       wrap.innerHTML = '';
       wrap.appendChild(glassBtn.element);
     } catch (e) {
