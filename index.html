@@ -190,6 +190,16 @@
       background: rgba(46,77,181,0.04);
     }
 
+    [data-theme="light"] .btn-fallback {
+      background: rgba(26,24,38,0.09);
+      color: #1A1826;
+      border: 1px solid rgba(26,24,38,0.18);
+    }
+
+    [data-theme="light"] .btn-fallback:hover {
+      background: rgba(26,24,38,0.14);
+    }
+
     .field-icon {
       position: absolute;
       right: 1rem; top: 50%;
@@ -616,10 +626,23 @@
   const saved = localStorage.getItem('pb-theme');
   if (saved) html.setAttribute('data-theme', saved);
 
+  function applyThemeToButton(theme) {
+    const glassEl = wrap.querySelector('canvas, .glass-button');
+    if (!glassEl) return;
+    if (theme === 'light') {
+      glassEl.style.display = 'none';
+      fallback.style.display = '';
+    } else {
+      glassEl.style.display = '';
+      fallback.style.display = 'none';
+    }
+  }
+
   toggleBtn.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     html.setAttribute('data-theme', next);
     localStorage.setItem('pb-theme', next);
+    applyThemeToButton(next);
   });
 
   /* ── Form submission ──────────────────────────── */
@@ -700,8 +723,10 @@
         onClick: () => handleSubmit(),
       });
       glassTextEl = glassBtn.element.querySelector('.glass-button-text');
-      wrap.innerHTML = '';
       wrap.appendChild(glassBtn.element);
+      fallback.style.display = 'none';
+      /* if page loaded in light mode, keep fallback visible */
+      applyThemeToButton(html.getAttribute('data-theme'));
     } catch (e) {
       /* WebGL unavailable — fallback button stays */
     }
