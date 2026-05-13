@@ -528,7 +528,6 @@
 
     <div class="form-wrap">
 
-      <p class="eyebrow">Early Access</p>
       <h2 class="form-title">Create a room.</h2>
       <p class="form-sub">Invite someone. Stay in sync.</p>
 
@@ -575,7 +574,7 @@
       </form>
 
       <div class="glass-btn-wrap" id="glass-btn-wrap">
-        <button class="btn-fallback" id="btn-fallback" type="button">Reserve my room →</button>
+        <button class="btn-fallback" id="btn-fallback" type="button">Join the Waitlist</button>
       </div>
 
       <p class="note">
@@ -685,7 +684,7 @@
 
     } catch {
       submitting = false;
-      setLabel('Reserve my room →');
+      setLabel('Join the Waitlist');
     }
   }
 
@@ -694,7 +693,7 @@
   window.addEventListener('load', () => {
     try {
       const glassBtn = new Button({
-        text: 'Reserve my room →',
+        text: 'Join the Waitlist',
         size: 17,
         type: 'pill',
         tintOpacity: 0.28,
