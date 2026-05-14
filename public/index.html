@@ -134,23 +134,13 @@
       top: 2rem;
       left: 2.5rem;
       z-index: 3;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-family: var(--inter);
-      font-size: 1rem;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      color: rgba(255,255,255,0.82);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.005em;
+      color: rgba(255,255,255,0.92);
       opacity: 0;
       animation: up 0.6s ease forwards;
-    }
-
-    .logo-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #4C6CB3;
-      flex-shrink: 0;
     }
 
     .left-copy {
@@ -429,23 +419,68 @@
 
     /* ── MOBILE ───────────────────────────────────── */
     @media (max-width: 800px) {
+      body { padding: 8px; }
+
       .split {
         grid-template-columns: 1fr;
-        grid-template-rows: 46svh 1fr;
+        grid-template-rows: auto auto;
+        min-height: calc(100vh - 16px);
+        border-radius: 8px;
       }
 
-      .panel-left  { padding: 1.5rem 1.75rem; }
-
+      /* form on TOP, photo on BOTTOM (mobile-first reorder) */
       .panel-right {
+        order: 1;
         border-left: none;
-        border-top: 1px solid var(--divider);
-        padding: 2.5rem 1.5rem 3rem;
+        border-bottom: 1px solid var(--divider);
+        padding: 3.25rem 1.5rem 3rem;
         align-items: flex-start;
       }
 
-      .form-wrap { max-width: 100%; }
-      .headline  { font-size: 2rem; }
-      .toggle-btn { top: 1rem; right: 1.25rem; }
+      .panel-left {
+        order: 2;
+        min-height: 44svh;
+        padding: 1.75rem 1.75rem 2rem;
+      }
+
+      .form-wrap {
+        max-width: 100%;
+        margin-top: 0;
+      }
+
+      .form-title {
+        font-size: 2.2rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .form-sub {
+        font-size: 1.1rem;
+        margin-bottom: 1.75rem;
+      }
+
+      .headline {
+        font-size: 1.9rem;
+        line-height: 1.1;
+        margin-bottom: 0.7rem;
+      }
+
+      .tagline {
+        font-size: 1rem;
+      }
+
+      .left-copy {
+        width: 88%;
+      }
+
+      .toggle-btn {
+        top: 1rem;
+        right: 1.25rem;
+      }
+
+      .logo {
+        top: 1.5rem;
+        left: 1.75rem;
+      }
     }
   </style>
 </head>
@@ -458,9 +493,7 @@
     <div class="bokeh"></div>
     <div class="vignette"></div>
 
-    <div class="logo">
-      projectblue <span class="logo-dot"></span>
-    </div>
+    <div class="logo">Project Blue</div>
 
     <div class="left-copy">
       <h1 class="headline">Listen together—<br>even when you're apart.</h1>
