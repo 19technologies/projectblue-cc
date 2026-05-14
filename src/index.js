@@ -1,14 +1,14 @@
 /**
- * Cloudflare Pages Function — /api/subscribe
+ * Project Blue — Cloudflare Worker
  *
- * Environment variables to set in Cloudflare Pages dashboard:
- *   RESEND_API_KEY      — from resend.com/api-keys
- *   RESEND_AUDIENCE_ID  — from resend.com/audiences (create one named "Project Blue Waitlist")
- *   ADMIN_EMAIL         — your email to receive signup notifications
+ * Routes:
+ *   POST /api/subscribe → Resend integration
+ *   * → static assets from ./public via env.ASSETS
  *
- * Your sending domain (projectblue.cc) must be verified in Resend before
- * you can send from waitlist@projectblue.cc. While testing, Resend allows
- * sending to your own account email from onboarding@resend.dev.
+ * Environment variables (Cloudflare dashboard → Settings → Variables):
+ *   RESEND_API_KEY      — secret
+ *   RESEND_AUDIENCE_ID  — optional, plaintext
+ *   ADMIN_EMAIL         — plaintext (honiegodfrey2@gmail.com)
  */
 
 const CORS = {
@@ -17,28 +17,32 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: CORS });
-}
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
 
-export async function onRequestPost(context) {
-  const { request, env } = context;
+    if (url.pathname === '/api/subscribe') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: CORS });
+      }
+      if (request.method === 'POST') {
+        return handleSubscribe(request, env);
+      }
+      return json({ error: 'Method not allowed' }, 405);
+    }
 
+    return env.ASSETS.fetch(request);
+  },
+};
+
+async function handleSubscribe(request, env) {
   try {
     const { email, phone, terms } = await request.json();
 
-    if (!terms) {
-      return json({ error: 'Terms not accepted' }, 400);
-    }
+    if (!terms) return json({ error: 'Terms not accepted' }, 400);
+    if (!email && !phone) return json({ error: 'Email or phone required' }, 400);
 
-    if (!email && !phone) {
-      return json({ error: 'Email or phone required' }, 400);
-    }
-
-    /* Skip API calls in local dev (no RESEND_API_KEY set) */
-    if (!env.RESEND_API_KEY) {
-      return json({ ok: true, dev: true });
-    }
+    if (!env.RESEND_API_KEY) return json({ ok: true, dev: true });
 
     const resend = (path, body) =>
       fetch(`https://api.resend.com${path}`, {
@@ -52,7 +56,6 @@ export async function onRequestPost(context) {
 
     const tasks = [];
 
-    /* Add to Resend Audience contact list */
     if (email && env.RESEND_AUDIENCE_ID) {
       tasks.push(
         resend(`/audiences/${env.RESEND_AUDIENCE_ID}/contacts`, {
@@ -62,7 +65,6 @@ export async function onRequestPost(context) {
       );
     }
 
-    /* Confirmation email to the user */
     if (email) {
       tasks.push(
         resend('/emails', {
@@ -74,13 +76,12 @@ export async function onRequestPost(context) {
       );
     }
 
-    /* Admin notification */
     if (env.ADMIN_EMAIL) {
       tasks.push(
         resend('/emails', {
           from: 'Project Blue <waitlist@projectblue.cc>',
           to: [env.ADMIN_EMAIL],
-          subject: `New waitlist signup — Project Blue`,
+          subject: 'New waitlist signup — Project Blue',
           html: `
             <p style="font-family:Georgia,serif;color:#1A1826;line-height:1.7">
               <strong>New signup</strong><br>
@@ -92,7 +93,6 @@ export async function onRequestPost(context) {
     }
 
     await Promise.allSettled(tasks);
-
     return json({ ok: true });
   } catch {
     return json({ error: 'Server error' }, 500);
