@@ -439,6 +439,37 @@ h1, h2, h3, h4, h5, h6, button {
   border-top: 1px solid var(--pb-hairline);
 }
 
+/* gov.uk-style phase banner — thin strip under the header */
+.pb-phase-banner {
+  border-bottom: 1px solid var(--pb-hairline);
+}
+.pb-phase-banner-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+.pb-phase-tag {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  color: #FFFFFF;
+  background: var(--pb-accent);
+  padding: 0.25rem 0.55rem;
+}
+.pb-phase-text {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.9rem;
+  color: var(--pb-text-soft);
+}
+@media (max-width: 760px) {
+  .pb-phase-banner-inner { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+
 /* ──────────────────────────────────────────────────────────────
    Beta gate page — large animated welcome + invite-code entry
    ────────────────────────────────────────────────────────────── */

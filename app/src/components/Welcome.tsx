@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BetaBanner } from "./BetaBanner";
 import { BetaRequestForm } from "./BetaRequestForm";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
@@ -60,6 +61,7 @@ export const Welcome = () => {
     <div className="pb-welcome">
       <div className="pb-topbar" aria-hidden />
       <Header brandAsLink={false} />
+      <BetaBanner />
 
       <main id="main" className="pb-welcome-main">
         <h1 className="pb-welcome-headline">

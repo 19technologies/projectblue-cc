@@ -35,15 +35,16 @@
     "ADMIN_EMAIL": "admin@projectblue.cc"
   },
 
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 
   /*
-    Production routes — wire after the first deploy in the Cloudflare
-    dashboard under Workers → Routes, or uncomment this block:
-
-    "routes": [
-      { "pattern": "projectblue.cc/*", "zone_name": "projectblue.cc" },
-      { "pattern": "admin.projectblue.cc/*", "zone_name": "projectblue.cc" }
-    ]
+    Custom domains — Cloudflare auto-provisions the DNS record + SSL cert
+    for each. The apex projectblue.cc is intentionally NOT here: it stays
+    on the old waitlist Worker until beta testing is finished. Add
+    { "pattern": "projectblue.cc", "custom_domain": true } when ready.
   */
+  "routes": [
+    { "pattern": "admin.projectblue.cc", "custom_domain": true },
+    { "pattern": "beta.projectblue.cc", "custom_domain": true }
+  ]
 }

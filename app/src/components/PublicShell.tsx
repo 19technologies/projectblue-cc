@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BetaBanner } from "./BetaBanner";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 
@@ -19,6 +20,7 @@ export const PublicShell = ({ kicker, title, children }: PublicShellProps) => {
     <div className="pb-welcome">
       <div className="pb-topbar" aria-hidden />
       <Header />
+      <BetaBanner />
 
       <main id="main" className="pb-welcome-main pb-legal">
         {kicker && <p className="pb-legal-updated">{kicker}</p>}
