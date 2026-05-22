@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
             title="Links"
             body="Edit the social links shown in the public footer — Instagram, X, Discord."
             cta="Manage links"
-            soon
+            href="/admin/links"
           />
           <AdminCard
             title="Terms & Privacy"
