@@ -1,9 +1,9 @@
 /**
  * User model + password hashing.
  *
- * Hashing uses Web Crypto PBKDF2-HMAC-SHA-256 (200k iterations, 16-byte salt,
+ * Hashing uses Web Crypto PBKDF2-HMAC-SHA-256 (100k iterations, 16-byte salt,
  * 32-byte key). Portable across Node, the Next.js edge runtime, and
- * Cloudflare Workers — no native bindings.
+ * Cloudflare Workers — no native bindings. 100k is the Workers ceiling.
  *
  * Hash format: `pbkdf2$<iterations>$<saltB64>$<keyB64>`
  */
@@ -12,7 +12,8 @@ import { getKV } from "./kv";
 
 const USER_KEY = (id: string) => `user:${id}`;
 const USER_INDEX = "user:_index";
-const PBKDF2_ITERATIONS = 200_000;
+// Cloudflare Workers' Web Crypto caps PBKDF2 at 100k iterations.
+const PBKDF2_ITERATIONS = 100_000;
 
 export interface User {
   id: string;
