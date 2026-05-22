@@ -178,6 +178,14 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-wordmark-line + .pb-wordmark-line { margin-top: 0; }
 
+/* Image logo override — admin-uploaded, replaces the text word-mark */
+.pb-wordmark-img {
+  display: block;
+  height: 2.75rem;
+  width: auto;
+  max-width: 220px;
+}
+
 /* Footer */
 .pb-welcome-footer {
   border-top: 1px solid var(--pb-hairline);

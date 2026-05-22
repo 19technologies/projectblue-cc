@@ -43,6 +43,12 @@ export default function AdminDashboardPage() {
             href="/admin/users"
           />
           <AdminCard
+            title="Branding"
+            body="Edit the Project Blue word-mark text, or upload an image logo to override it."
+            cta="Edit branding"
+            href="/admin/branding"
+          />
+          <AdminCard
             title="Links"
             body="Edit the social links shown in the public footer — Instagram, X, Discord."
             cta="Manage links"
