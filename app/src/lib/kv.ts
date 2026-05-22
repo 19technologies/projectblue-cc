@@ -9,6 +9,7 @@
  * without a real KV namespace.
  */
 
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { promises as fs } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -83,31 +84,22 @@ class FileKV implements KVStore {
   }
 }
 
-let cached: KVStore | null = null;
+let fileStore: KVStore | null = null;
 
 export function getKV(): KVStore {
-  if (cached) return cached;
-
   // Prefer the Cloudflare binding when running on the Workers runtime
-  // (production or local `wrangler dev`). Falls back to the file store
-  // when running `next dev` on Node.
+  // (production or `bun preview`). getCloudflareContext() throws under a
+  // plain `next dev`, in which case we fall back to the file store.
   try {
-    // Lazy require so Node-only `next dev` doesn't try to bundle worker code.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require("@opennextjs/cloudflare") as {
-      getCloudflareContext?: () => {
-        env?: { PROJECTBLUE_KV?: CloudflareKVNamespace };
-      };
-    };
-    const ns = mod.getCloudflareContext?.().env?.PROJECTBLUE_KV;
-    if (ns) {
-      cached = new CloudflareKV(ns);
-      return cached;
-    }
+    const { env } = getCloudflareContext();
+    const ns = (env as { PROJECTBLUE_KV?: CloudflareKVNamespace }).PROJECTBLUE_KV;
+    if (ns) return new CloudflareKV(ns);
   } catch {
-    /* not on Cloudflare runtime — fall through to file store */
+    /* not on the Cloudflare runtime — fall through */
   }
 
-  cached = new FileKV(join(process.cwd(), ".kv-dev", "projectblue.json"));
-  return cached;
+  if (!fileStore) {
+    fileStore = new FileKV(join(process.cwd(), ".kv-dev", "projectblue.json"));
+  }
+  return fileStore;
 }
