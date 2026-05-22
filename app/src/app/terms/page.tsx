@@ -1,5 +1,5 @@
 import { PublicShell } from "@/components/PublicShell";
-import { LEGAL_SEED } from "@/lib/legalSeed";
+import { getLegal } from "@/lib/legal";
 import { renderMarkdown } from "@/lib/markdown";
 import type { Metadata } from "next";
 
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TermsPage() {
-  // Once the admin/legal editor ships, swap LEGAL_SEED.terms for
-  // `await getLegal("terms")` — same shape, KV-backed.
-  const doc = LEGAL_SEED.terms;
+  const doc = await getLegal("terms");
   const html = renderMarkdown(doc.body);
   const updated = new Date(doc.updatedAt).toISOString().slice(0, 10);
   return (

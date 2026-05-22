@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
             title="Terms & Privacy"
             body="Edit the live Terms and Privacy notice. Changes go live within a minute."
             cta="Edit legal"
-            soon
+            href="/admin/legal"
           />
           <AdminCard
             title="Blog & Docs"

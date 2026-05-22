@@ -1,5 +1,5 @@
 import { PublicShell } from "@/components/PublicShell";
-import { LEGAL_SEED } from "@/lib/legalSeed";
+import { getLegal } from "@/lib/legal";
 import { renderMarkdown } from "@/lib/markdown";
 import type { Metadata } from "next";
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PrivacyPage() {
-  const doc = LEGAL_SEED.privacy;
+  const doc = await getLegal("privacy");
   const html = renderMarkdown(doc.body);
   const updated = new Date(doc.updatedAt).toISOString().slice(0, 10);
   return (

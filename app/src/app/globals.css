@@ -583,3 +583,35 @@ h1, h2, h3, h4, h5, h6, button {
   font-family: "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
   color: var(--pb-text-soft);
 }
+
+/* Markdown editor — textarea + live preview split */
+.pb-md-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.pb-md-textarea {
+  width: 100%;
+  min-height: 36rem;
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--pb-text);
+  background: transparent;
+  border: 2px solid var(--pb-text);
+  border-radius: 0;
+  padding: 1rem;
+  outline: none;
+  resize: vertical;
+}
+.pb-md-preview {
+  min-height: 36rem;
+  border: 2px solid var(--pb-hairline);
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+@media (max-width: 960px) {
+  .pb-md-grid { grid-template-columns: 1fr; }
+  .pb-md-textarea, .pb-md-preview { min-height: 24rem; }
+}
