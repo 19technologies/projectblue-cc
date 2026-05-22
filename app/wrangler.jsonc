@@ -39,11 +39,12 @@
 
   /*
     Custom domains — Cloudflare auto-provisions the DNS record + SSL cert
-    for each. The apex projectblue.cc is intentionally NOT here: it stays
-    on the old waitlist Worker until beta testing is finished. Add
-    { "pattern": "projectblue.cc", "custom_domain": true } when ready.
+    for each. The apex serves the minimal beta landing (ApexLanding);
+    beta.* serves the gated app; admin.* serves the dashboard. All three
+    are the one projectblue-app Worker, split by Host header in page.tsx.
   */
   "routes": [
+    { "pattern": "projectblue.cc", "custom_domain": true },
     { "pattern": "admin.projectblue.cc", "custom_domain": true },
     { "pattern": "beta.projectblue.cc", "custom_domain": true }
   ]

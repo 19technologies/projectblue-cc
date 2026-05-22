@@ -2,25 +2,42 @@
 
 import { PublicShell } from "@/components/PublicShell";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function SignInPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("Email and password required.");
       return;
     }
     setBusy(true);
-    setTimeout(() => {
-      toast.info("Account sign-in arrives in the next build.");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(error || "Sign-in failed.");
+        setBusy(false);
+        return;
+      }
+      toast.success("Signed in.");
+      router.push("/");
+      router.refresh();
+    } catch {
+      toast.error("Network error.");
       setBusy(false);
-    }, 600);
+    }
   };
 
   return (

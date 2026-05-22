@@ -24,6 +24,11 @@ export interface BetaSession {
   redeemedAt?: string;
 }
 
+export interface UserSession {
+  userId?: string;
+  email?: string;
+}
+
 export const sessionOptions: SessionOptions = {
   password: sessionSecret,
   cookieName: "pb_admin_session",
@@ -44,6 +49,19 @@ export const betaSessionOptions: SessionOptions = {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     // ~30 days — testers shouldn't have to re-enter the code every day.
+    maxAge: 60 * 60 * 24 * 30,
+  },
+};
+
+/** Public user accounts — separate from both the admin and beta sessions. */
+export const userSessionOptions: SessionOptions = {
+  password: sessionSecret,
+  cookieName: "pb_user_session",
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
     maxAge: 60 * 60 * 24 * 30,
   },
 };
