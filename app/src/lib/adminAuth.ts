@@ -1,4 +1,5 @@
 import type { SessionOptions } from "iron-session";
+import { ensureSeedAdmin, getUserByEmail, verifyPassword } from "./users";
 
 export interface AdminSession {
   userId?: string;
@@ -22,24 +23,18 @@ export const sessionOptions: SessionOptions = {
 };
 
 /**
- * Auth swap-point. Phase 2 (users slice) replaces the body with a
- * KV-backed user lookup + PBKDF2 password verification. Signature and
- * return shape stay identical so callers don't change.
- *
- * Today: single env-var pair.
+ * KV-backed user lookup with PBKDF2 password verification. On the first
+ * sign-in attempt to a fresh deployment, the seed admin is created from
+ * ADMIN_EMAIL/ADMIN_PASSWORD env vars (or documented dev defaults).
  */
 export async function validateCredentials(
   email: string,
   password: string
 ): Promise<{ userId: string; email: string; isAdmin: boolean } | null> {
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@projectblue.cc";
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "changeme";
-
-  if (
-    email.trim().toLowerCase() === adminEmail.toLowerCase() &&
-    password === adminPassword
-  ) {
-    return { userId: "admin-1", email: adminEmail, isAdmin: true };
-  }
-  return null;
+  await ensureSeedAdmin();
+  const user = await getUserByEmail(email);
+  if (!user) return null;
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return null;
+  return { userId: user.id, email: user.email, isAdmin: user.isAdmin };
 }

@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
             title="Users"
             body="Add admin users and revoke access. Passwords are PBKDF2-hashed."
             cta="Manage users"
-            soon
+            href="/admin/users"
           />
           <AdminCard
             title="Links"
