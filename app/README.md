@@ -3,6 +3,9 @@
 The Next.js 16 client for [projectblue.cc](https://projectblue.cc).
 Listen together — even when you're apart.
 
+> 📘 **Setting it up?** Read [SETUP.md](../SETUP.md) at the repo root.
+> Step-by-step: local dev, Cloudflare deployment, end-to-end testing.
+
 ## Quick start
 
 ```bash
