@@ -18,8 +18,7 @@ export default function AdminPagesPage() {
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
-    setLoading(true);
+  const load = async () => {
     try {
       const res = await fetch("/api/admin/pages");
       setPages((await res.json()) as PageSummary[]);
@@ -27,8 +26,13 @@ export default function AdminPagesPage() {
       setLoading(false);
     }
   };
+  const refresh = async () => {
+    setLoading(true);
+    await load();
+  };
   useEffect(() => {
-    void refresh();
+    // load() doesn't synchronously setLoading; loading already starts true.
+    void load();
   }, []);
 
   const onDelete = async (id: string, title: string) => {

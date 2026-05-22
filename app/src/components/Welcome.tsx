@@ -19,8 +19,11 @@ export const Welcome = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Generate after mount to avoid SSR/client hydration mismatch.
+  // The setState-in-effect lint rule is acknowledged but unavoidable here —
+  // the code must be random per visit, so it cannot be computed during SSR.
   useEffect(() => {
     const fresh = generateRoomCode();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCode(fresh);
     queueMicrotask(() => {
       inputRef.current?.focus();

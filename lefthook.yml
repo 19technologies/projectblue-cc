@@ -1,0 +1,15 @@
+# Pre-commit hooks for Project Blue.
+# Install once after cloning:  bunx lefthook install --config lefthook.yml
+# (or `npx lefthook install` if you don't have bun).
+
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      root: app/
+      glob: "src/**/*.{ts,tsx}"
+      run: bun run typecheck
+    lint:
+      root: app/
+      glob: "src/**/*.{ts,tsx}"
+      run: bun run lint

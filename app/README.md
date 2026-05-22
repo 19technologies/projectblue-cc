@@ -7,8 +7,9 @@ Listen together — even when you're apart.
 
 ```bash
 bun install
-cp .env.example .env.local   # fill in SESSION_SECRET + ADMIN_*
-bun dev                      # http://localhost:3000
+cp .env.example .env.local           # fill in SESSION_SECRET + ADMIN_*
+bunx lefthook install                # one-time: install pre-commit hooks
+bun dev                              # http://localhost:3000
 ```
 
 ## Design north stars

@@ -19,8 +19,7 @@ export default function AdminUsersPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const refresh = async () => {
-    setLoading(true);
+  const load = async () => {
     try {
       const res = await fetch("/api/admin/users");
       setUsers((await res.json()) as PublicUser[]);
@@ -30,8 +29,14 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   };
+  const refresh = async () => {
+    setLoading(true);
+    await load();
+  };
   useEffect(() => {
-    void refresh();
+    // load() sets state only after awaiting fetch — fetch-on-mount, allowed pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {

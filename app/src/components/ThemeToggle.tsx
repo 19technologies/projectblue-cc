@@ -1,33 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
+/**
+ * Subscribe to `data-theme` changes on <html>. Uses a MutationObserver so any
+ * code that flips the attribute (this component, the boot script in layout.tsx,
+ * a future per-page override) re-renders consumers without manual setState.
+ */
+const themeSubscribe = (cb: () => void) => {
+  if (typeof window === "undefined") return () => {};
+  const obs = new MutationObserver(cb);
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+  return () => obs.disconnect();
+};
+
+const getThemeSnapshot = (): Theme =>
+  typeof document !== "undefined" &&
+  document.documentElement.dataset.theme === "dark"
+    ? "dark"
+    : "light";
+
+const mountSubscribe = () => () => {};
+
 export const ThemeToggle = () => {
-  const [theme, setTheme] = useState<Theme | null>(null);
+  const mounted = useSyncExternalStore(
+    mountSubscribe,
+    () => true,
+    () => false
+  );
+  const theme = useSyncExternalStore(
+    themeSubscribe,
+    getThemeSnapshot,
+    () => "light" as Theme
+  );
 
-  useEffect(() => {
-    const current =
-      document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    setTheme(current);
-  }, []);
+  // Don't render until mounted so SSR markup matches the client's first paint.
+  if (!mounted) return null;
 
+  const isDark = theme === "dark";
   const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+    const next: Theme = isDark ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem("pb-theme", next);
     } catch {
       /* private mode */
     }
-    setTheme(next);
   };
 
-  // Render nothing pre-mount so SSR markup matches the client's first paint.
-  if (theme === null) return null;
-
-  const isDark = theme === "dark";
   return (
     <button
       type="button"
