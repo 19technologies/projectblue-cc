@@ -4,10 +4,18 @@ import { WordMark } from "@/components/BrandMark";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 
 export default function AdminNewPagePage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminNewPageInner />
+    </Suspense>
+  );
+}
+
+function AdminNewPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const kindParam = params.get("kind");

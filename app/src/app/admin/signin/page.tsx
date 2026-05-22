@@ -2,10 +2,20 @@
 
 import { WordMark } from "@/components/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 
 export default function AdminSignInPage() {
+  // useSearchParams must sit inside a Suspense boundary for Next 16 to
+  // prerender this route.
+  return (
+    <Suspense fallback={null}>
+      <AdminSignInInner />
+    </Suspense>
+  );
+}
+
+function AdminSignInInner() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/admin";
