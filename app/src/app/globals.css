@@ -103,3 +103,160 @@ h1, h2, h3, h4, h5, h6, button {
   z-index: 1000;
 }
 .pb-skip:focus { transform: translateY(0); }
+
+/* ──────────────────────────────────────────────────────────────
+   Chrome — Header + Footer + WordMark + ThemeToggle.
+   Shared by welcome, /signin/up, /terms, /privacy, /blog, /docs.
+   ────────────────────────────────────────────────────────────── */
+.pb-topbar {
+  height: 10px;
+  background: var(--pb-bar);
+  width: 100%;
+}
+
+.pb-welcome-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.25rem 2rem 0;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.pb-welcome-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  padding-top: 0.65rem;
+}
+
+.pb-nav-link {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--pb-text);
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 2px;
+  transition: color 200ms cubic-bezier(.2, .7, .3, 1),
+              background 200ms cubic-bezier(.2, .7, .3, 1);
+}
+.pb-nav-link:hover { color: var(--pb-accent-strong); }
+
+.pb-nav-link-primary {
+  text-decoration: none;
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  padding: 0.55rem 0.95rem;
+  border: 2px solid var(--pb-ink);
+}
+.pb-nav-link-primary:hover {
+  background: transparent;
+  color: var(--pb-ink);
+}
+
+/* Mont Blanc-style stacked word-mark */
+.pb-wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--pb-text);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-wordmark-line {
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.32em;
+  line-height: 1.05;
+  margin-top: 0.65rem;
+  text-indent: 0.32em; /* optical centring against tracking */
+}
+.pb-wordmark-line + .pb-wordmark-line { margin-top: 0.1rem; }
+
+/* Footer */
+.pb-welcome-footer {
+  border-top: 1px solid var(--pb-hairline);
+  padding: 1.75rem 2rem 2.5rem;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--pb-text-soft);
+}
+.pb-footer-link {
+  color: var(--pb-text-soft);
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 2px;
+  transition: color 200ms cubic-bezier(.2, .7, .3, 1);
+}
+.pb-footer-link:hover { color: var(--pb-accent-strong); }
+
+.pb-footer-spacer { flex: 1; }
+
+.pb-footer-divider {
+  display: inline-block;
+  width: 1px;
+  height: 1rem;
+  background: var(--pb-hairline);
+  margin: 0 0.25rem;
+}
+
+.pb-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--pb-text-soft);
+  text-decoration: none;
+  transition: color 200ms cubic-bezier(.2, .7, .3, 1);
+}
+.pb-social:hover { color: var(--pb-accent-strong); }
+.pb-social-label {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 2px;
+}
+
+.pb-theme-toggle {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--pb-text-soft);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 200ms cubic-bezier(.2, .7, .3, 1);
+}
+.pb-theme-toggle:hover { color: var(--pb-accent-strong); }
+
+@media (max-width: 760px) {
+  .pb-welcome-header { padding: 1.75rem 1.5rem 0; }
+  .pb-welcome-footer { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+@media (max-width: 540px) {
+  .pb-footer-spacer { display: none; }
+  .pb-social-label { display: none; }
+  .pb-footer-divider { display: none; }
+}
