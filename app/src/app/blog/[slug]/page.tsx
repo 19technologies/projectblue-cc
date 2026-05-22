@@ -24,7 +24,10 @@ export default async function BlogPostPage({ params }: Props) {
   const updated = new Date(page.updatedAt).toISOString().slice(0, 10);
   return (
     <PublicShell kicker={`Blog · ${updated}`} title={page.title}>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className="pb-prose-serif"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </PublicShell>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { EB_Garamond, Inter } from "next/font/google";
+import { Archivo, EB_Garamond, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -14,6 +14,15 @@ const garamond = EB_Garamond({
   subsets: ["latin"],
   display: "swap",
   style: ["normal", "italic"],
+});
+
+// Wide bold grotesk for the Project Blue word-mark — a free, reliable
+// stand-in for Neue Haas Grotesk Display.
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  weight: ["800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -62,7 +71,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${inter.variable} ${garamond.variable}`}
+        className={`${inter.variable} ${garamond.variable} ${archivo.variable}`}
       >
         <a href="#main" className="pb-skip">Skip to main content</a>
         {children}
