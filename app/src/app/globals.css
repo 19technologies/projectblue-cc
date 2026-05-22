@@ -506,3 +506,80 @@ h1, h2, h3, h4, h5, h6, button {
   padding: 0.1em 0.4em;
   border-radius: 2px;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Admin dashboard
+   ────────────────────────────────────────────────────────────── */
+.pb-admin-page { /* mostly shares pb-welcome chrome; reserved hook */ }
+
+.pb-admin-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  color: var(--pb-on-ink);
+  background: var(--pb-ink);
+  padding: 0.35rem 0.7rem;
+}
+
+.pb-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 1rem;
+}
+.pb-admin-card {
+  border: 2px solid var(--pb-text);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pb-admin-card-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.005em;
+  color: var(--pb-text);
+}
+.pb-admin-card-body {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--pb-text-soft);
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .pb-admin-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+}
+
+.pb-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-admin-table thead th {
+  text-align: left;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pb-text);
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 2px solid var(--pb-text);
+}
+.pb-admin-table tbody td {
+  padding: 0.85rem 0.75rem 0.85rem 0;
+  border-bottom: 1px solid var(--pb-hairline);
+  color: var(--pb-text);
+  font-size: 1rem;
+}
+.pb-admin-table tbody td:last-child { text-align: right; }
+.pb-admin-table code {
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+  color: var(--pb-text-soft);
+}
