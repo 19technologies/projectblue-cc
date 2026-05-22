@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "projectblue-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  /*
+    Application + OpenNext cache live in the same KV namespace; key prefixes
+    keep them separate (user:*, page:*, legal:*, social_links vs the cache
+    keys OpenNext writes under its own scheme).
+
+    Create the namespace once, then paste the returned `id`:
+      bunx wrangler kv namespace create PROJECTBLUE_KV
+  */
+  "kv_namespaces": [
+    {
+      "binding": "PROJECTBLUE_KV",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+
+  /*
+    Non-secret env vars. Secrets (SESSION_SECRET, ADMIN_PASSWORD) are NOT
+    placed here — set them via:
+      bunx wrangler secret put SESSION_SECRET
+      bunx wrangler secret put ADMIN_PASSWORD
+  */
+  "vars": {
+    "ADMIN_EMAIL": "admin@projectblue.cc"
+  },
+
+  "observability": { "enabled": true }
+
+  /*
+    Production routes — wire after the first deploy in the Cloudflare
+    dashboard under Workers → Routes, or uncomment this block:
+
+    "routes": [
+      { "pattern": "projectblue.cc/*", "zone_name": "projectblue.cc" },
+      { "pattern": "admin.projectblue.cc/*", "zone_name": "projectblue.cc" }
+    ]
+  */
+}
