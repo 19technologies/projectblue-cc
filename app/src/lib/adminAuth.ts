@@ -1,26 +1,7 @@
-import type { SessionOptions } from "iron-session";
 import { ensureSeedAdmin, getUserByEmail, verifyPassword } from "./users";
 
-export interface AdminSession {
-  userId?: string;
-  email?: string;
-  isAdmin?: boolean;
-}
-
-const sessionSecret =
-  process.env.SESSION_SECRET ??
-  "dev-only-secret-change-me-at-least-32-characters-long-aaaaaaaaaaaaaaaa";
-
-export const sessionOptions: SessionOptions = {
-  password: sessionSecret,
-  cookieName: "pb_admin_session",
-  cookieOptions: {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  },
-};
+// Re-export so existing imports `from "@/lib/adminAuth"` keep working.
+export { sessionOptions, type AdminSession } from "./sessions";
 
 /**
  * KV-backed user lookup with PBKDF2 password verification. On the first

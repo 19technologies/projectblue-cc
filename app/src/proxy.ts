@@ -1,8 +1,14 @@
 import { getIronSession } from "iron-session";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { sessionOptions, type AdminSession } from "@/lib/adminAuth";
-import { betaSessionOptions, type BetaSession } from "@/lib/betaAuth";
+import {
+  betaSessionOptions,
+  sessionOptions,
+  type AdminSession,
+  type BetaSession,
+} from "@/lib/sessions";
+
+export const runtime = "edge";
 
 const ADMIN_HOST_PATTERN = /^admin\./;
 const BETA_HOST_PATTERN = /^beta\./;

@@ -7,6 +7,9 @@ node_modules/
 out/
 .turbo/
 
+# OpenNext build output
+.open-next/
+
 # Local dev KV store (admin-edited content; never commit)
 .kv-dev/
 
