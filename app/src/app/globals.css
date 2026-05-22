@@ -425,6 +425,20 @@ h1, h2, h3, h4, h5, h6, button {
   .pb-welcome-main { padding: 3rem 1.5rem; }
 }
 
+/* "Project Blue is in private beta · Request access" — sits below the form */
+.pb-beta-prompt {
+  margin-top: 3rem;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+  color: var(--pb-text-soft);
+}
+.pb-beta-form {
+  margin-top: 2.5rem;
+  max-width: 32rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--pb-hairline);
+}
+
 /* ──────────────────────────────────────────────────────────────
    Form primitives shared by auth + admin
    ────────────────────────────────────────────────────────────── */

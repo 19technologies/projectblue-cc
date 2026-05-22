@@ -13,8 +13,18 @@ interface BetaInvite {
   usedBy?: string;
 }
 
+interface BetaRequest {
+  id: string;
+  email: string;
+  message?: string;
+  requestedAt: string;
+  status: "pending" | "invited" | "declined";
+  invitedCode?: string;
+}
+
 export default function AdminBetaPage() {
   const [invites, setInvites] = useState<BetaInvite[]>([]);
+  const [requests, setRequests] = useState<BetaRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [count, setCount] = useState(1);
   const [note, setNote] = useState("");
@@ -22,10 +32,14 @@ export default function AdminBetaPage() {
 
   const load = async () => {
     try {
-      const res = await fetch("/api/admin/beta/codes");
-      setInvites((await res.json()) as BetaInvite[]);
+      const [invitesRes, requestsRes] = await Promise.all([
+        fetch("/api/admin/beta/codes"),
+        fetch("/api/admin/beta/requests"),
+      ]);
+      setInvites((await invitesRes.json()) as BetaInvite[]);
+      setRequests((await requestsRes.json()) as BetaRequest[]);
     } catch {
-      toast.error("Couldn't load invites.");
+      toast.error("Couldn't load beta data.");
     } finally {
       setLoading(false);
     }
@@ -145,6 +159,122 @@ export default function AdminBetaPage() {
               </button>
             </div>
           </form>
+        </section>
+
+        <hr className="pb-welcome-rule" />
+
+        <section style={{ marginBottom: "3rem" }}>
+          <h2 className="pb-admin-card-title" style={{ marginBottom: "1rem" }}>
+            Access requests{" "}
+            <span style={{ color: "var(--pb-text-soft)", fontWeight: 400 }}>
+              ({requests.filter((r) => r.status === "pending").length} pending)
+            </span>
+          </h2>
+          {loading ? (
+            <p className="pb-admin-card-body">Loading…</p>
+          ) : requests.length === 0 ? (
+            <p className="pb-admin-card-body">No one&apos;s asked yet.</p>
+          ) : (
+            <table className="pb-admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Message</th>
+                  <th>When</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.email}</td>
+                    <td style={{ color: "var(--pb-text-soft)" }}>
+                      {r.message ?? "—"}
+                    </td>
+                    <td>
+                      {new Date(r.requestedAt).toISOString().slice(0, 10)}
+                    </td>
+                    <td>
+                      {r.status === "pending"
+                        ? "Pending"
+                        : r.status === "invited"
+                          ? r.invitedCode
+                            ? `Invited · ${r.invitedCode}`
+                            : "Invited"
+                          : "Declined"}
+                    </td>
+                    <td>
+                      {r.status === "pending" ? (
+                        <>
+                          <button
+                            type="button"
+                            className="pb-shuffle"
+                            onClick={async () => {
+                              const res = await fetch(
+                                `/api/admin/beta/requests/${r.id}`,
+                                {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    status: "invited",
+                                    mintCode: true,
+                                  }),
+                                }
+                              );
+                              if (!res.ok) {
+                                toast.error("Couldn't invite.");
+                                return;
+                              }
+                              toast.success("Invited and code minted.");
+                              await refresh();
+                            }}
+                          >
+                            Invite
+                          </button>
+                          {"  ·  "}
+                          <button
+                            type="button"
+                            className="pb-shuffle"
+                            onClick={async () => {
+                              await fetch(
+                                `/api/admin/beta/requests/${r.id}`,
+                                {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ status: "declined" }),
+                                }
+                              );
+                              toast.success("Declined.");
+                              await refresh();
+                            }}
+                          >
+                            Decline
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="pb-shuffle"
+                          onClick={async () => {
+                            if (!confirm(`Delete the record for ${r.email}?`)) return;
+                            await fetch(
+                              `/api/admin/beta/requests/${r.id}`,
+                              { method: "DELETE" }
+                            );
+                            toast.success("Deleted.");
+                            await refresh();
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
 
         <hr className="pb-welcome-rule" />

@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BetaRequestForm } from "./BetaRequestForm";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 
@@ -109,6 +110,8 @@ export const Welcome = () => {
             </div>
           </form>
         </section>
+
+        <BetaRequestForm />
       </main>
 
       <Footer />
