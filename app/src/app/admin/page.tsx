@@ -31,6 +31,12 @@ export default function AdminDashboardPage() {
 
         <div className="pb-admin-grid">
           <AdminCard
+            title="Beta access"
+            body="Mint single-use invite codes for beta testers and review who's redeemed what."
+            cta="Manage beta"
+            href="/admin/beta"
+          />
+          <AdminCard
             title="Users"
             body="Add admin users and revoke access. Passwords are PBKDF2-hashed."
             cta="Manage users"
