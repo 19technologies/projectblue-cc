@@ -2,6 +2,14 @@
 .claude/
 node_modules/
 
+# Next.js
+.next/
+out/
+.turbo/
+
+# Local dev KV store (admin-edited content; never commit)
+.kv-dev/
+
 # wrangler files
 .wrangler
 .dev.vars*
