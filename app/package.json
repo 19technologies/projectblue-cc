@@ -11,9 +11,12 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "iron-session": "^8.0.4",
+    "marked": "^18.0.4",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

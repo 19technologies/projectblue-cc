@@ -1,26 +1,105 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ──────────────────────────────────────────────────────────────
+   Project Blue design tokens.
+
+   Influences (in order of weight):
+     1. gov.uk     — decisive type hierarchy, accent yellow focus,
+                     black + white core with one accent.
+     2. Mont Blanc — monolithic stacked word-mark, considered.
+     3. cosmos.so  — paper-blue warmth, italic display moments,
+                     calm 200ms cubic-bezier transitions.
+
+   Non-goals: deep-sea descent metaphors, dark-Beatsync gradients,
+   neon, busy chrome.
+   ────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  --pb-bg:            #F2F5FD; /* paper-blue, not pure white */
+  --pb-text:          #0B0E14;
+  --pb-text-soft:     rgba(11, 14, 20, 0.7);
+  --pb-text-faint:    rgba(11, 14, 20, 0.25);
+  --pb-ink:           #0B1A3F; /* dark blue, reads near-black on white */
+  --pb-on-ink:        #FFFFFF;
+  --pb-ink-shadow:    rgba(11, 26, 63, 0.65);
+  --pb-bar:           #0B1A3F; /* gov.uk-style 10px top band */
+  --pb-muted:         #5F6B7A;
+  --pb-accent:        #4C6CB3;
+  --pb-accent-strong: #2E4A8F;
+  --pb-hairline:      rgba(11, 14, 20, 0.15);
+  --pb-rule:          #0B0E14;
+  --pb-focus:         #FFDD00;
+}
+
+[data-theme="dark"] {
+  --pb-bg:            #0A0D1A; /* deep-warm-black */
+  --pb-text:          #ECF0FF;
+  --pb-text-soft:     rgba(236, 240, 255, 0.72);
+  --pb-text-faint:    rgba(236, 240, 255, 0.28);
+  --pb-ink:           #ECF0FF; /* cream "ink" inverted for dark mode */
+  --pb-on-ink:        #050810;
+  --pb-ink-shadow:    rgba(0, 0, 0, 0.55);
+  --pb-bar:           #4C6CB3; /* brand accent keeps the band visible */
+  --pb-muted:         #7080AA;
+  --pb-accent:        #5B7BC4;
+  --pb-accent-strong: #8AA8DE;
+  --pb-hairline:      rgba(236, 240, 255, 0.18);
+  --pb-rule:          #ECF0FF;
+  --pb-focus:         #FFDD00;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-pb-bg:     var(--pb-bg);
+  --color-pb-text:   var(--pb-text);
+  --color-pb-ink:    var(--pb-ink);
+  --color-pb-accent: var(--pb-accent);
+  --font-sans:       var(--font-inter);
+  --font-display:    var(--font-garamond);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ──────────────────────────────────────────────────────────────
+   Base
+   ────────────────────────────────────────────────────────────── */
+html, body { background: var(--pb-bg); color: var(--pb-text); }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
 }
+
+h1, h2, h3, h4, h5, h6, button {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+/* gov.uk-style 3px-yellow / 3px-black focus indicator on every focusable */
+*:focus-visible {
+  outline: 3px solid var(--pb-focus) !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 6px var(--pb-rule) !important;
+  border-radius: 0 !important;
+}
+
+::selection { background: var(--pb-accent); color: #FFFFFF; }
+
+/* Skip link — visible on focus */
+.pb-skip {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  padding: 0.6rem 1rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 200ms cubic-bezier(.2, .7, .3, 1);
+  z-index: 1000;
+}
+.pb-skip:focus { transform: translateY(0); }
