@@ -260,3 +260,167 @@ h1, h2, h3, h4, h5, h6, button {
   .pb-social-label { display: none; }
   .pb-footer-divider { display: none; }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Welcome screen — bold and spacey. The whole page is one shell.
+   ────────────────────────────────────────────────────────────── */
+.pb-welcome {
+  background: var(--pb-bg);
+  color: var(--pb-text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pb-welcome-main {
+  flex: 1;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 5rem 2rem;
+}
+
+.pb-welcome-headline {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.022em;
+  color: var(--pb-text);
+  margin-bottom: 2.5rem;
+  max-width: 22ch;
+}
+/* Garamond italic emphasis — the cosmos.so magazine moment */
+.pb-welcome-headline .pb-emph {
+  font-family: var(--font-garamond), "EB Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  padding-right: 0.04em;
+}
+
+.pb-welcome-rule {
+  border: 0;
+  border-top: 3px solid var(--pb-rule);
+  margin: 0 0 3.5rem;
+  width: 100%;
+}
+
+.pb-welcome-actions {
+  max-width: 32rem;
+  margin-bottom: 4rem;
+}
+
+.pb-action-form { display: flex; flex-direction: column; }
+
+/* Small-caps metadata stamp — cosmos.so editorial label */
+.pb-action-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pb-text);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--pb-text);
+  display: inline-block;
+  align-self: flex-start;
+}
+
+/* The bold spacey code input — uppercase mono, big tracking */
+.pb-code-input {
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  letter-spacing: 0.18em;
+  color: var(--pb-text);
+  background: transparent;
+  border: 0;
+  border-bottom: 4px solid var(--pb-text);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  outline: none;
+  text-transform: uppercase;
+  text-align: left;
+  width: 100%;
+  caret-color: var(--pb-accent);
+}
+.pb-code-input::placeholder {
+  color: var(--pb-text-faint);
+  font-weight: 700;
+}
+
+.pb-action-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.pb-action-btn {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--pb-on-ink);
+  background: var(--pb-ink);
+  border: 2px solid var(--pb-ink);
+  border-radius: 0;
+  padding: 0.95rem 1.5rem;
+  cursor: pointer;
+  align-self: flex-start;
+  box-shadow: 0 2px 0 var(--pb-ink-shadow);
+  transition: background 200ms cubic-bezier(.2,.7,.3,1),
+              border-color 200ms cubic-bezier(.2,.7,.3,1),
+              transform 200ms cubic-bezier(.2,.7,.3,1),
+              color 200ms cubic-bezier(.2,.7,.3,1);
+}
+.pb-action-btn:hover {
+  background: var(--pb-accent);
+  border-color: var(--pb-accent);
+  color: #FFFFFF;
+}
+.pb-action-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--pb-ink-shadow);
+}
+.pb-action-btn:disabled {
+  background: var(--pb-text-faint);
+  border-color: var(--pb-text-faint);
+  color: var(--pb-on-ink);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.pb-action-btn-secondary {
+  background: transparent;
+  color: var(--pb-ink);
+  box-shadow: none;
+}
+.pb-action-btn-secondary:hover {
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  border-color: var(--pb-ink);
+}
+
+.pb-shuffle {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--pb-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  text-decoration-thickness: 2px;
+  transition: color 200ms cubic-bezier(.2,.7,.3,1);
+}
+.pb-shuffle:hover { color: var(--pb-accent-strong); }
+
+@media (max-width: 760px) {
+  .pb-welcome-main { padding: 3rem 1.5rem; }
+}
