@@ -615,3 +615,44 @@ h1, h2, h3, h4, h5, h6, button {
   .pb-md-grid { grid-template-columns: 1fr; }
   .pb-md-textarea, .pb-md-preview { min-height: 24rem; }
 }
+
+/* ── Public blog/docs index ──────────────────────────────────── */
+.pb-page-index {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pb-page-index li {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--pb-hairline);
+}
+.pb-page-index li:last-child { border-bottom: 0; }
+.pb-page-index a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  text-decoration: none;
+  color: var(--pb-text);
+}
+.pb-page-index-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+.pb-page-index a:hover .pb-page-index-title { color: var(--pb-accent-strong); }
+.pb-page-index-date {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--pb-text-soft);
+}
+.pb-page-index-excerpt {
+  margin-top: 0.5rem;
+  color: var(--pb-text-soft);
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: 38rem;
+}

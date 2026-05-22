@@ -52,7 +52,7 @@ export default function AdminDashboardPage() {
             title="Blog & Docs"
             body="Create, edit and remove blog posts and docs pages."
             cta="Manage pages"
-            soon
+            href="/admin/pages"
           />
         </div>
       </main>
