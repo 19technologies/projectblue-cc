@@ -34,7 +34,10 @@ export const TopBar = ({ roomId }: TopBarProps) => {
               <Crown className="h-3 w-3 text-green-500" fill="currentColor" />
             </div>
           )}
-          <Link href="/" className="font-medium hover:text-white transition-colors">
+          <Link
+            href="/"
+            className="font-archivo text-[0.78rem] tracking-[0.04em] uppercase font-extrabold hover:text-white transition-colors"
+          >
             Project Blue
           </Link>
 

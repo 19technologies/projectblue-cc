@@ -109,7 +109,7 @@ export const Join = () => {
             </motion.div>
           ) : null}
           <motion.h2
-            className="text-base font-medium tracking-tight mb-1 text-white"
+            className="font-garamond italic text-2xl tracking-tight mb-1 text-white"
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.13 }}

@@ -301,3 +301,33 @@
   --color-primary-900: #1F2C49;
   --color-primary-950: #131A2E;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Project Blue typography — Inter is the body sans; Garamond is
+   reserved for italic display copy; Archivo (heavy) is the brand
+   word-mark. Mono stays as Geist Mono for code blocks.
+   ────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-garamond: var(--font-garamond);
+  --font-archivo: var(--font-archivo);
+}
+
+.font-garamond { font-family: var(--font-garamond), Georgia, serif; }
+.font-archivo  { font-family: var(--font-archivo), "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
+/* Project Blue's signature top band. Overlay (no body padding) so
+   beatsync's h-dvh layouts aren't pushed out of the viewport — the
+   band sits on top of the underlying TopBar's dark fill, reading as
+   an accent stripe. */
+.pb-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: #5B7BC4;   /* pb-bar dark — keeps the band visible */
+  z-index: 9999;
+  pointer-events: none;
+}
