@@ -1,0 +1,40 @@
+# Project Blue fork client — Next.js standalone build for Fly.io.
+# Beatsync ships a server-only Dockerfile (the original ./Dockerfile);
+# this one packages the Next.js client.
+
+# ── Stage 1: install workspace deps ───────────────────────────────────
+FROM oven/bun:1 AS deps
+WORKDIR /app
+COPY package.json bun.lock turbo.json ./
+COPY apps/client/package.json ./apps/client/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+RUN bun install --frozen-lockfile
+
+# ── Stage 2: build the Next app ───────────────────────────────────────
+FROM oven/bun:1 AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/client/node_modules ./apps/client/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY . .
+# NEXT_PUBLIC_* values are baked in at build time. Override via build-arg
+# from fly.client.toml when the api URL changes.
+ARG NEXT_PUBLIC_API_URL=https://api.fork.projectblue.cc
+ARG NEXT_PUBLIC_WS_URL=wss://api.fork.projectblue.cc/ws
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+WORKDIR /app/apps/client
+RUN bun run build
+
+# ── Stage 3: minimal runtime ──────────────────────────────────────────
+FROM oven/bun:1-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+# Standalone output bundles a tiny node_modules; copy public/ and .next/static separately.
+COPY --from=builder /app/apps/client/public ./public
+COPY --from=builder /app/apps/client/.next/standalone ./
+COPY --from=builder /app/apps/client/.next/static ./apps/client/.next/static
+EXPOSE 3000
+CMD ["bun", "run", "apps/client/server.js"]

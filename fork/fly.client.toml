@@ -1,0 +1,34 @@
+# Fly.io config for the Next.js client (fork.projectblue.cc frontend).
+# Deploy from the fork/ directory with:
+#   fly deploy -c fly.client.toml --dockerfile Dockerfile.client
+#
+# DNS: fork.projectblue.cc → CNAME → pb-fork-client.fly.dev
+# The client reads NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL at build
+# time; both default to api.fork.projectblue.cc (see Dockerfile.client).
+
+app = "pb-fork-client"
+primary_region = "iad"   # match the server's region for lowest RTT
+
+[build]
+  dockerfile = "Dockerfile.client"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 100
+    hard_limit = 150
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

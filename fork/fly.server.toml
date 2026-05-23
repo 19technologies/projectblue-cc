@@ -1,0 +1,39 @@
+# Fly.io config for the beatsync Bun server (fork.projectblue.cc backend).
+# Deploy from the fork/ directory with:
+#   fly deploy -c fly.server.toml --dockerfile Dockerfile
+#
+# DNS: api.fork.projectblue.cc → CNAME → pb-fork-server.fly.dev
+# Secrets are set with `fly secrets set NAME=value -a pb-fork-server`:
+#   S3_BUCKET_NAME, S3_PUBLIC_URL, S3_ENDPOINT,
+#   S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
+# (S3_* values come from your Cloudflare R2 bucket — beatsync expects the
+#  S3-compatible API.)
+
+app = "pb-fork-server"
+primary_region = "iad"   # change to your nearest region; `fly platform regions`
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0    # bump to 1 once you have real traffic
+  processes = ["app"]
+
+  # WebSocket-friendly settings — keep the connection alive long enough
+  # for an audio listening session.
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
