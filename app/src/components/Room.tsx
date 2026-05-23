@@ -1012,7 +1012,7 @@ export const Room = ({ code }: { code: string }) => {
       onDragLeave={onDragLeave}
     >
       <header className="pb-side-head">
-        <h2 className="pb-side-title">Up next</h2>
+        <h2 className="pb-side-title">Playlist</h2>
         <span className="pb-side-count">{queue.length}</span>
         {isHost && queue.length > 0 && (
           <button
@@ -1425,7 +1425,7 @@ export const Room = ({ code }: { code: string }) => {
                 className={`pb-mobile-tab ${mobileTab === "queue" ? "is-active" : ""}`}
                 onClick={() => setMobileTab("queue")}
               >
-                Queue · {queue.length}
+                Playlist · {queue.length}
               </button>
               <button
                 type="button"
