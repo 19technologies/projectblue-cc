@@ -51,6 +51,15 @@ export interface MediaState {
 
 /* ── Client → server ───────────────────────────────────────────── */
 
+/** "off" → pause when queue empty; "all" → played items go back to end;
+ *  "one" → replay the current track on advance. Independent of shuffle. */
+export type RepeatMode = "off" | "all" | "one";
+
+export interface PlaybackMode {
+  shuffle: boolean;
+  repeat: RepeatMode;
+}
+
 export type ClientMessage =
   | { type: "HELLO"; clientId: string; name: string }
   | { type: "SET_MEDIA"; media: Media }
@@ -63,6 +72,9 @@ export type ClientMessage =
   | { type: "QUEUE_REMOVE"; itemId: string }
   | { type: "QUEUE_CLEAR" }
   | { type: "QUEUE_NEXT" }
+  /** Move `itemId` to index `to` (clamped). Host-only. */
+  | { type: "QUEUE_REORDER"; itemId: string; to: number }
+  | { type: "SET_MODE"; mode: Partial<PlaybackMode> }
   | { type: "CHAT"; text: string }
   | { type: "PING"; t0: number };
 
@@ -77,12 +89,14 @@ export type ServerMessage =
       state: MediaState | null;
       queue: QueueItem[];
       chat: ChatMsg[];
+      mode: PlaybackMode;
     }
   | { type: "PEER_JOINED"; peer: PeerInfo }
   | { type: "PEER_LEFT"; peerId: string }
   | { type: "HOST"; hostId: string | null }
   | { type: "MEDIA"; state: MediaState }
   | { type: "QUEUE"; queue: QueueItem[] }
+  | { type: "MODE"; mode: PlaybackMode }
   | { type: "CHAT"; msg: ChatMsg }
   | { type: "PONG"; t0: number; serverMs: number }
   | { type: "ERROR"; code: "NOT_HOST" | "BAD_INPUT"; message?: string };
@@ -152,6 +166,27 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       return { type: "QUEUE_CLEAR" };
     case "QUEUE_NEXT":
       return { type: "QUEUE_NEXT" };
+    case "QUEUE_REORDER":
+      if (
+        typeof m.itemId === "string" &&
+        m.itemId.length <= 64 &&
+        typeof m.to === "number" &&
+        Number.isInteger(m.to) &&
+        m.to >= 0
+      ) {
+        return { type: "QUEUE_REORDER", itemId: m.itemId, to: m.to };
+      }
+      return null;
+    case "SET_MODE": {
+      if (!m.mode || typeof m.mode !== "object") return null;
+      const raw = m.mode as Record<string, unknown>;
+      const mode: Partial<PlaybackMode> = {};
+      if (typeof raw.shuffle === "boolean") mode.shuffle = raw.shuffle;
+      if (raw.repeat === "off" || raw.repeat === "all" || raw.repeat === "one") {
+        mode.repeat = raw.repeat;
+      }
+      return Object.keys(mode).length > 0 ? { type: "SET_MODE", mode } : null;
+    }
     case "CHAT":
       if (typeof m.text === "string") {
         const text = m.text.trim().slice(0, 500);

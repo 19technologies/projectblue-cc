@@ -13,6 +13,15 @@ export function extractVideoId(input: string): string | null {
   return null;
 }
 
+/** Extract a playlist id from a URL (or raw id). */
+export function extractPlaylistId(input: string): string | null {
+  const s = input.trim();
+  const m = s.match(/[?&]list=([A-Za-z0-9_-]{10,64})/);
+  if (m) return m[1];
+  if (/^PL[A-Za-z0-9_-]{8,62}$/.test(s)) return s;
+  return null;
+}
+
 /* Minimal YouTube IFrame Player typings — only what the room uses. */
 export interface YTPlayer {
   loadVideoById(opts: { videoId: string; startSeconds?: number }): void;

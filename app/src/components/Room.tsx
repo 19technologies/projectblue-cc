@@ -2,6 +2,7 @@
 
 import { WordMark } from "@/components/BrandMark";
 import {
+  extractPlaylistId,
   extractVideoId,
   loadYouTubeAPI,
   YT_ENDED,
@@ -42,6 +43,11 @@ interface Peer {
   id: string;
   name: string;
 }
+type RepeatMode = "off" | "all" | "one";
+interface PlaybackMode {
+  shuffle: boolean;
+  repeat: RepeatMode;
+}
 type ServerMessage =
   | {
       type: "ROOM_STATE";
@@ -51,12 +57,14 @@ type ServerMessage =
       state: MediaState | null;
       queue: QueueItem[];
       chat: ChatMsg[];
+      mode: PlaybackMode;
     }
   | { type: "PEER_JOINED"; peer: Peer }
   | { type: "PEER_LEFT"; peerId: string }
   | { type: "HOST"; hostId: string | null }
   | { type: "MEDIA"; state: MediaState }
   | { type: "QUEUE"; queue: QueueItem[] }
+  | { type: "MODE"; mode: PlaybackMode }
   | { type: "CHAT"; msg: ChatMsg }
   | { type: "PONG"; t0: number; serverMs: number }
   | { type: "ERROR"; code: "NOT_HOST" | "BAD_INPUT"; message?: string };
@@ -155,8 +163,12 @@ export const Room = ({ code }: { code: string }) => {
   const [peers, setPeers] = useState<Peer[]>([]);
   const [state, setState] = useState<MediaState | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [mode, setMode] = useState<PlaybackMode>({ shuffle: false, repeat: "off" });
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
+  /** Index of the queue item being dragged (for reorder drag-and-drop). */
+  const [dragItemIdx, setDragItemIdx] = useState<number | null>(null);
+  const [importingPlaylist, setImportingPlaylist] = useState(false);
   const [selfId, setSelfId] = useState<string | null>(null);
   const [hostId, setHostId] = useState<string | null>(null);
   const [ytUrl, setYtUrl] = useState("");
@@ -537,6 +549,7 @@ export const Room = ({ code }: { code: string }) => {
             setHostId(msg.hostId);
             setQueue(msg.queue);
             setChat(msg.chat);
+            setMode(msg.mode);
             if (msg.state) applyState(msg.state);
             break;
           case "PEER_JOINED":
@@ -553,6 +566,9 @@ export const Room = ({ code }: { code: string }) => {
             break;
           case "QUEUE":
             setQueue(msg.queue);
+            break;
+          case "MODE":
+            setMode(msg.mode);
             break;
           case "CHAT":
             setChat((c) => [...c, msg.msg]);
@@ -769,6 +785,35 @@ export const Room = ({ code }: { code: string }) => {
     if (queue.length === 0) return;
     send({ type: "QUEUE_CLEAR" });
   };
+  const onToggleShuffle = () => {
+    if (!isHost) return;
+    send({ type: "SET_MODE", mode: { shuffle: !mode.shuffle } });
+  };
+  const onCycleRepeat = () => {
+    if (!isHost) return;
+    const next: RepeatMode =
+      mode.repeat === "off" ? "all" : mode.repeat === "all" ? "one" : "off";
+    send({ type: "SET_MODE", mode: { repeat: next } });
+  };
+  /** HTML5 drag-and-drop reorder for queue items (host only). */
+  const onQueueItemDragStart = (idx: number) => {
+    if (!isHost) return;
+    setDragItemIdx(idx);
+  };
+  const onQueueItemDragOver = (e: React.DragEvent) => {
+    if (!isHost || dragItemIdx === null) return;
+    e.preventDefault();
+  };
+  const onQueueItemDrop = (toIdx: number) => {
+    if (!isHost || dragItemIdx === null) {
+      setDragItemIdx(null);
+      return;
+    }
+    const item = queue[dragItemIdx];
+    setDragItemIdx(null);
+    if (!item || toIdx === dragItemIdx) return;
+    send({ type: "QUEUE_REORDER", itemId: item.id, to: toIdx });
+  };
 
   /* ── Bulk upload + drag-drop ──────────────────────────────────────── */
   const onUploadFiles = useCallback(async (files: File[]) => {
@@ -864,15 +909,49 @@ export const Room = ({ code }: { code: string }) => {
     if (dragCounterRef.current === 0) setDragOver(false);
   };
 
-  const onSetYouTube = (e: React.FormEvent) => {
+  const onSetYouTube = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Multi-line input — extract every YouTube ID we can find.
-    const ids = ytUrl
-      .split(/\s+/)
-      .map((s) => extractVideoId(s))
-      .filter((id): id is string => !!id);
-    if (ids.length === 0) {
+    const lines = ytUrl.split(/\s+/).filter(Boolean);
+    if (lines.length === 0) {
       toast.error("Paste at least one YouTube link or 11-character video ID.");
+      return;
+    }
+
+    const videoIds = new Set<string>();
+    const playlistIds: string[] = [];
+    for (const line of lines) {
+      const v = extractVideoId(line);
+      if (v) videoIds.add(v);
+      const list = extractPlaylistId(line);
+      // Pure ?list=... URLs have no v=. Watch URLs may carry both; prefer
+      // the explicit video, but still expand the playlist alongside.
+      if (list && !v) playlistIds.push(list);
+    }
+
+    if (playlistIds.length > 0) {
+      setImportingPlaylist(true);
+      try {
+        for (const pid of playlistIds) {
+          const res = await fetch(`/api/youtube/playlist/${encodeURIComponent(pid)}`);
+          if (!res.ok) {
+            const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+            toast.error(error || `Couldn't import playlist (${res.status}).`);
+            continue;
+          }
+          const body = (await res.json()) as { videoIds: string[]; truncated?: boolean };
+          for (const v of body.videoIds) videoIds.add(v);
+          if (body.truncated) {
+            toast.message("Playlist was long — only the first 200 tracks were imported.");
+          }
+        }
+      } finally {
+        setImportingPlaylist(false);
+      }
+    }
+
+    const ids = [...videoIds];
+    if (ids.length === 0) {
+      toast.error("Couldn't find any YouTube videos in that input.");
       return;
     }
     if (ids.length === 1) {
@@ -946,17 +1025,45 @@ export const Room = ({ code }: { code: string }) => {
           </button>
         )}
       </header>
+      {state && (
+        <div className="pb-now-playing" aria-label="Now playing">
+          <span className="pb-now-label">Now playing</span>
+          <span
+            className="pb-now-title"
+            title={mediaLabel(state.media)}
+          >
+            {mediaLabel(state.media)}
+          </span>
+          <span className={`pb-now-dot ${state.playing ? "is-playing" : ""}`} aria-hidden />
+        </div>
+      )}
       {queue.length === 0 ? (
         <p className="pb-side-empty">
-          Nothing queued. Drop audio files here, or add below.
+          Drop audio files here, pick many at once, or paste YouTube links below.
         </p>
       ) : (
         <ol className="pb-queue-list">
           {queue.map((item, i) => {
             const canRemove = isHost || item.addedBy === selfId;
+            const isDragging = dragItemIdx === i;
             return (
-              <li key={item.id} className="pb-queue-item">
-                <span className="pb-queue-index">{i + 1}</span>
+              <li
+                key={item.id}
+                className={`pb-queue-item ${isDragging ? "is-dragging" : ""}`}
+                draggable={isHost}
+                onDragStart={() => onQueueItemDragStart(i)}
+                onDragOver={onQueueItemDragOver}
+                onDrop={(e) => {
+                  e.stopPropagation();
+                  onQueueItemDrop(i);
+                }}
+                onDragEnd={() => setDragItemIdx(null)}
+              >
+                {isHost ? (
+                  <span className="pb-queue-handle" aria-hidden title="Drag to reorder">⋮⋮</span>
+                ) : (
+                  <span className="pb-queue-index">{i + 1}</span>
+                )}
                 <span className="pb-queue-title" title={mediaLabel(item.media)}>
                   {mediaLabel(item.media)}
                 </span>
@@ -992,16 +1099,16 @@ export const Room = ({ code }: { code: string }) => {
 
       <div className="pb-room-controls" style={{ marginTop: "1rem" }}>
         <p className="pb-action-label" style={{ marginBottom: "0.6rem" }}>
-          {isHost ? "Add to queue" : "Suggest tracks"}
+          {isHost ? "Build the playlist" : "Suggest tracks"}
           {uploadProgress &&
-            ` · ${uploadProgress.done}/${uploadProgress.total}`}
+            ` · uploading ${uploadProgress.done}/${uploadProgress.total}`}
         </p>
         <div className="pb-room-actions">
           <label
             className="pb-action-btn"
             style={{ cursor: uploading ? "progress" : "pointer" }}
           >
-            {uploading ? "Uploading…" : "+ Upload music"}
+            {uploading ? "Uploading…" : "+ Add tracks"}
             <input
               type="file"
               multiple
@@ -1023,7 +1130,7 @@ export const Room = ({ code }: { code: string }) => {
             onClick={() => setShowYtForm((v) => !v)}
             className="pb-action-btn pb-action-btn-secondary"
           >
-            {showYtForm ? "Cancel" : "+ YouTube link"}
+            {showYtForm ? "Cancel" : "+ YouTube"}
           </button>
         </div>
         {showYtForm && (
@@ -1033,18 +1140,22 @@ export const Room = ({ code }: { code: string }) => {
                 className="pb-input pb-textarea"
                 value={ytUrl}
                 onChange={(e) => setYtUrl(e.target.value)}
-                placeholder={"Paste one or more YouTube links — one per line"}
+                placeholder={
+                  "Paste videos or playlists (?list=…) — one per line"
+                }
                 rows={3}
                 autoFocus
+                disabled={importingPlaylist}
               />
-              <button type="submit" className="pb-action-btn">
-                Add
+              <button type="submit" className="pb-action-btn" disabled={importingPlaylist}>
+                {importingPlaylist ? "Importing…" : "Add"}
               </button>
             </div>
           </form>
         )}
         <p className="pb-room-hint" style={{ marginTop: "0.6rem" }}>
-          Pick many at once, or drag a folder of tracks here. 15&nbsp;MB per file.
+          Pick many tracks at once, drop a folder here, or paste a YouTube
+          playlist URL. 15&nbsp;MB per file.
         </p>
       </div>
     </section>
@@ -1232,11 +1343,36 @@ export const Room = ({ code }: { code: string }) => {
                   type="button"
                   className="pb-host-btn"
                   onClick={onSkip}
-                  disabled={queue.length === 0}
+                  disabled={queue.length === 0 && mode.repeat === "off"}
                   aria-label="Skip to next"
                   title="Skip to next"
                 >
                   ⏭
+                </button>
+                <button
+                  type="button"
+                  className={`pb-host-btn pb-host-btn-toggle ${mode.shuffle ? "is-on" : ""}`}
+                  onClick={onToggleShuffle}
+                  aria-pressed={mode.shuffle}
+                  title={mode.shuffle ? "Shuffle on" : "Shuffle off"}
+                  aria-label="Toggle shuffle"
+                >
+                  ⤮
+                </button>
+                <button
+                  type="button"
+                  className={`pb-host-btn pb-host-btn-toggle ${mode.repeat !== "off" ? "is-on" : ""}`}
+                  onClick={onCycleRepeat}
+                  title={
+                    mode.repeat === "off"
+                      ? "Repeat off"
+                      : mode.repeat === "all"
+                        ? "Repeat all"
+                        : "Repeat one"
+                  }
+                  aria-label="Cycle repeat mode"
+                >
+                  {mode.repeat === "one" ? "🔂" : "🔁"}
                 </button>
                 <span className="pb-host-bar-label">Hosting</span>
               </div>

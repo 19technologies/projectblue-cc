@@ -1075,6 +1075,49 @@ h1, h2, h3, h4, h5, h6, button {
   background: color-mix(in srgb, var(--pb-accent) 6%, var(--pb-bg));
 }
 
+/* Now-playing row above the queue */
+.pb-now-playing {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0.65rem;
+  padding: 0.55rem 0.25rem 0.7rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--pb-hairline);
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-now-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pb-accent);
+}
+.pb-now-title {
+  font-size: 0.92rem;
+  color: var(--pb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.pb-now-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--pb-text-faint);
+  align-self: center;
+}
+.pb-now-dot.is-playing {
+  background: var(--pb-accent);
+  animation: pb-now-pulse 1.6s ease-in-out infinite;
+}
+@keyframes pb-now-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
 /* Queue list */
 .pb-queue-list {
   list-style: none;
@@ -1094,6 +1137,19 @@ h1, h2, h3, h4, h5, h6, button {
   font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 .pb-queue-item:last-child { border-bottom: 0; }
+.pb-queue-item[draggable="true"] { cursor: grab; }
+.pb-queue-item.is-dragging {
+  opacity: 0.45;
+  background: color-mix(in srgb, var(--pb-accent) 8%, transparent);
+}
+.pb-queue-handle {
+  font-size: 0.85rem;
+  color: var(--pb-text-faint);
+  letter-spacing: -0.1em;
+  text-align: right;
+  user-select: none;
+  cursor: grab;
+}
 .pb-queue-index {
   font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
@@ -1201,6 +1257,23 @@ h1, h2, h3, h4, h5, h6, button {
 .pb-host-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+/* Shuffle / repeat toggles — outline-style, fill when on. */
+.pb-host-btn-toggle {
+  background: transparent;
+  color: var(--pb-text);
+  border-color: var(--pb-hairline);
+  font-size: 0.9rem;
+}
+.pb-host-btn-toggle:hover {
+  background: transparent;
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+}
+.pb-host-btn-toggle.is-on {
+  background: var(--pb-accent);
+  color: var(--pb-on-ink);
+  border-color: var(--pb-accent);
 }
 .pb-host-bar-label {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;

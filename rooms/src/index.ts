@@ -24,6 +24,7 @@ import {
   type ChatMsg,
   type MediaState,
   type PeerInfo,
+  type PlaybackMode,
   type QueueItem,
   type ServerMessage,
 } from "./protocol";
@@ -92,13 +93,17 @@ const SK = {
   state: "v1:state",
   queue: "v1:queue",
   chat: "v1:chat",
+  mode: "v1:mode",
 } as const;
+
+const DEFAULT_MODE: PlaybackMode = { shuffle: false, repeat: "off" };
 
 export class RoomDO extends DurableObject<Env> {
   private sessions = new Set<Session>();
   private state: MediaState | null = null;
   private queue: QueueItem[] = [];
   private chat: ChatMsg[] = [];
+  private mode: PlaybackMode = { ...DEFAULT_MODE };
   private hostId: string | null = null;
   private joinCounter = 0;
   private chatBuckets = new Map<string, number[]>();
@@ -108,14 +113,16 @@ export class RoomDO extends DurableObject<Env> {
     // Hydrate persisted state before any fetch() is dispatched —
     // blockConcurrencyWhile defers incoming work until this resolves.
     ctx.blockConcurrencyWhile(async () => {
-      const [s, q, c] = await Promise.all([
+      const [s, q, c, m] = await Promise.all([
         ctx.storage.get<MediaState>(SK.state),
         ctx.storage.get<QueueItem[]>(SK.queue),
         ctx.storage.get<ChatMsg[]>(SK.chat),
+        ctx.storage.get<PlaybackMode>(SK.mode),
       ]);
       if (s) this.state = s;
       if (q) this.queue = q;
       if (c) this.chat = c;
+      if (m) this.mode = { ...DEFAULT_MODE, ...m };
     });
   }
 
@@ -210,9 +217,40 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /** Advance to the next queued item (or pause). Used both by an explicit
-   *  QUEUE_NEXT from the host and as a hook for client-reported end-of-media. */
+   *  QUEUE_NEXT from the host and as a hook for client-reported end-of-media.
+   *  Applies the current playback mode (shuffle / repeat). */
   private advanceQueue() {
-    const next = this.queue.shift();
+    // Repeat-one — just replay the current track from 0.
+    if (this.mode.repeat === "one" && this.state) {
+      this.state = {
+        ...this.state,
+        playing: true,
+        positionSec: 0,
+        anchorServerMs: Date.now() + SCHEDULE_LEAD_MS,
+      };
+      this.broadcast({ type: "MEDIA", state: this.state });
+      this.persist(SK.state, this.state);
+      return;
+    }
+
+    // Repeat-all — push the just-finished item back to the end so the
+    // queue cycles. Synthesise a QueueItem from the current media.
+    if (this.mode.repeat === "all" && this.state) {
+      this.queue.push({
+        id: crypto.randomUUID(),
+        media: this.state.media,
+        addedBy: "system",
+      });
+    }
+
+    let next: QueueItem | undefined;
+    if (this.mode.shuffle && this.queue.length > 0) {
+      const idx = Math.floor(Math.random() * this.queue.length);
+      next = this.queue.splice(idx, 1)[0];
+    } else {
+      next = this.queue.shift();
+    }
+
     if (next) {
       this.state = {
         media: next.media,
@@ -266,6 +304,7 @@ export class RoomDO extends DurableObject<Env> {
           state: this.freshenState(),
           queue: this.queue,
           chat: this.chat,
+          mode: this.mode,
         });
         this.broadcast({ type: "PEER_JOINED", peer: session.peer }, session);
         // Tell everyone (including this peer if it became host) who's host.
@@ -406,9 +445,34 @@ export class RoomDO extends DurableObject<Env> {
         this.persist(SK.queue, this.queue);
         break;
       }
+      case "QUEUE_REORDER": {
+        if (!this.isHost(session)) return this.rejectNonHost(session);
+        const from = this.queue.findIndex((q) => q.id === msg.itemId);
+        if (from < 0) return;
+        const to = Math.max(0, Math.min(this.queue.length - 1, msg.to));
+        if (to === from) return;
+        const [moved] = this.queue.splice(from, 1);
+        this.queue.splice(to, 0, moved);
+        this.broadcast({ type: "QUEUE", queue: this.queue });
+        this.persist(SK.queue, this.queue);
+        break;
+      }
       case "QUEUE_NEXT": {
         if (!this.isHost(session)) return this.rejectNonHost(session);
         this.advanceQueue();
+        break;
+      }
+      case "SET_MODE": {
+        if (!this.isHost(session)) return this.rejectNonHost(session);
+        const next: PlaybackMode = {
+          shuffle:
+            typeof msg.mode.shuffle === "boolean" ? msg.mode.shuffle : this.mode.shuffle,
+          repeat: msg.mode.repeat ?? this.mode.repeat,
+        };
+        if (next.shuffle === this.mode.shuffle && next.repeat === this.mode.repeat) return;
+        this.mode = next;
+        this.broadcast({ type: "MODE", mode: this.mode });
+        this.persist(SK.mode, this.mode);
         break;
       }
       case "CHAT": {
