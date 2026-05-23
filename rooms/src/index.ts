@@ -3,15 +3,16 @@
  *
  * One Durable Object instance per 6-character room code. The browser opens
  * a WebSocket to wss://rooms.projectblue.cc/room/<CODE>; the Worker routes
- * it to that room's DO, which coordinates synchronized YouTube playback.
+ * it to that room's DO, which coordinates synchronized playback of either
+ * an uploaded audio file or a YouTube video.
  */
 
 import {
   encode,
   parseClientMessage,
+  type MediaState,
   type PeerInfo,
   type ServerMessage,
-  type VideoState,
 } from "./protocol";
 
 interface Env {
@@ -55,9 +56,9 @@ interface Session {
 
 export class RoomDO {
   private sessions = new Set<Session>();
-  private video: VideoState | null = null;
+  private state: MediaState | null = null;
 
-  async fetch(request: Request): Promise<Response> {
+  async fetch(_request: Request): Promise<Response> {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
@@ -100,20 +101,20 @@ export class RoomDO {
     }
   }
 
-  /** Re-anchor the video state to "now" so late joiners compute the right
-   *  playhead. Returns the freshened state. */
-  private freshenVideo(): VideoState | null {
-    if (!this.video) return null;
+  /** Re-anchor playback state to "now" so late joiners compute the right
+   *  playhead. */
+  private freshenState(): MediaState | null {
+    if (!this.state) return null;
     const now = Date.now();
-    if (this.video.playing) {
-      const elapsed = (now - this.video.anchorServerMs) / 1000;
-      this.video = {
-        ...this.video,
-        positionSec: this.video.positionSec + elapsed,
+    if (this.state.playing) {
+      const elapsed = (now - this.state.anchorServerMs) / 1000;
+      this.state = {
+        ...this.state,
+        positionSec: this.state.positionSec + elapsed,
         anchorServerMs: now,
       };
     }
-    return this.video;
+    return this.state;
   }
 
   private onMessage(session: Session, raw: string) {
@@ -124,7 +125,6 @@ export class RoomDO {
       case "HELLO": {
         session.peer = { id: session.peer.id, name: msg.name || "guest" };
         session.helloed = true;
-        // Hand the newcomer the current room + a re-anchored video state.
         const peers = [...this.sessions]
           .filter((s) => s.helloed)
           .map((s) => s.peer);
@@ -132,51 +132,51 @@ export class RoomDO {
           type: "ROOM_STATE",
           selfId: session.peer.id,
           peers,
-          video: this.freshenVideo(),
+          state: this.freshenState(),
         });
         this.broadcast({ type: "PEER_JOINED", peer: session.peer }, session);
         break;
       }
-      case "SET_VIDEO": {
-        this.video = {
-          videoId: msg.videoId,
+      case "SET_MEDIA": {
+        this.state = {
+          media: msg.media,
           playing: false,
           positionSec: 0,
           anchorServerMs: Date.now(),
         };
-        this.broadcast({ type: "PLAYBACK", video: this.video });
+        this.broadcast({ type: "MEDIA", state: this.state });
         break;
       }
       case "PLAY": {
-        if (!this.video) return;
-        this.video = {
-          ...this.video,
+        if (!this.state) return;
+        this.state = {
+          ...this.state,
           playing: true,
           positionSec: msg.positionSec,
           anchorServerMs: Date.now(),
         };
-        this.broadcast({ type: "PLAYBACK", video: this.video });
+        this.broadcast({ type: "MEDIA", state: this.state });
         break;
       }
       case "PAUSE": {
-        if (!this.video) return;
-        this.video = {
-          ...this.video,
+        if (!this.state) return;
+        this.state = {
+          ...this.state,
           playing: false,
           positionSec: msg.positionSec,
           anchorServerMs: Date.now(),
         };
-        this.broadcast({ type: "PLAYBACK", video: this.video });
+        this.broadcast({ type: "MEDIA", state: this.state });
         break;
       }
       case "SEEK": {
-        if (!this.video) return;
-        this.video = {
-          ...this.video,
+        if (!this.state) return;
+        this.state = {
+          ...this.state,
           positionSec: msg.positionSec,
           anchorServerMs: Date.now(),
         };
-        this.broadcast({ type: "PLAYBACK", video: this.video });
+        this.broadcast({ type: "MEDIA", state: this.state });
         break;
       }
       case "PING": {

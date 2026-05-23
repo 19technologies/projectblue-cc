@@ -1,7 +1,12 @@
 /**
- * Wire protocol for the room WebSocket — synchronized YouTube watching.
+ * Wire protocol for the room WebSocket.
  *
- * Manual validation (no zod) to keep the Worker bundle tiny. Every inbound
+ * Media is the primary abstraction — a room plays one Media at a time,
+ * which is either an uploaded audio file or a YouTube video. The sync
+ * logic (play / pause / seek anchored to a server timestamp) is the same
+ * for both.
+ *
+ * Manual validation (no zod) keeps the Worker bundle tiny. Every inbound
  * message is checked by parseClientMessage before use.
  */
 
@@ -10,9 +15,13 @@ export interface PeerInfo {
   name: string;
 }
 
-/** Authoritative playback state, held by the RoomDO. */
-export interface VideoState {
-  videoId: string;
+export type Media =
+  | { kind: "youtube"; videoId: string }
+  | { kind: "audio"; url: string; title?: string };
+
+/** Authoritative playback state held by the RoomDO. */
+export interface MediaState {
+  media: Media;
   playing: boolean;
   /** Playhead position (seconds) at anchorServerMs. */
   positionSec: number;
@@ -24,7 +33,7 @@ export interface VideoState {
 
 export type ClientMessage =
   | { type: "HELLO"; clientId: string; name: string }
-  | { type: "SET_VIDEO"; videoId: string }
+  | { type: "SET_MEDIA"; media: Media }
   | { type: "PLAY"; positionSec: number }
   | { type: "PAUSE"; positionSec: number }
   | { type: "SEEK"; positionSec: number }
@@ -33,13 +42,33 @@ export type ClientMessage =
 /* ── Server → client ───────────────────────────────────────────── */
 
 export type ServerMessage =
-  | { type: "ROOM_STATE"; selfId: string; peers: PeerInfo[]; video: VideoState | null }
+  | { type: "ROOM_STATE"; selfId: string; peers: PeerInfo[]; state: MediaState | null }
   | { type: "PEER_JOINED"; peer: PeerInfo }
   | { type: "PEER_LEFT"; peerId: string }
-  | { type: "PLAYBACK"; video: VideoState }
+  | { type: "MEDIA"; state: MediaState }
   | { type: "PONG"; t0: number; serverMs: number };
 
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
+const AUDIO_URL = /^\/api\/audio\/[A-Za-z0-9_-]{1,80}$/;
+
+function parseMedia(v: unknown): Media | null {
+  if (!v || typeof v !== "object") return null;
+  const m = v as Record<string, unknown>;
+  if (m.kind === "youtube") {
+    if (typeof m.videoId === "string" && YT_ID.test(m.videoId)) {
+      return { kind: "youtube", videoId: m.videoId };
+    }
+    return null;
+  }
+  if (m.kind === "audio") {
+    if (typeof m.url === "string" && AUDIO_URL.test(m.url)) {
+      const title = typeof m.title === "string" ? m.title.slice(0, 120) : undefined;
+      return { kind: "audio", url: m.url, title };
+    }
+    return null;
+  }
+  return null;
+}
 
 export function parseClientMessage(raw: string): ClientMessage | null {
   let v: unknown;
@@ -57,11 +86,10 @@ export function parseClientMessage(raw: string): ClientMessage | null {
         return { type: "HELLO", clientId: m.clientId, name: m.name.slice(0, 40) };
       }
       return null;
-    case "SET_VIDEO":
-      if (typeof m.videoId === "string" && YT_ID.test(m.videoId)) {
-        return { type: "SET_VIDEO", videoId: m.videoId };
-      }
-      return null;
+    case "SET_MEDIA": {
+      const media = parseMedia(m.media);
+      return media ? { type: "SET_MEDIA", media } : null;
+    }
     case "PLAY":
     case "PAUSE":
     case "SEEK":

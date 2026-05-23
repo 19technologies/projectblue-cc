@@ -494,36 +494,69 @@ h1, h2, h3, h4, h5, h6, button {
   border: 2px solid var(--pb-text);
   margin-bottom: 2rem;
 }
-.pb-yt-player,
-.pb-yt-player iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-.pb-yt-empty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 1rem;
-  pointer-events: none;
+/* YT.Player replaces #pb-yt-player with an iframe — target the iframe so
+   it fills the frame regardless of YT's defaults. */
+.pb-yt-frame iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
 }
 
-.pb-room-form { margin-bottom: 1.5rem; }
+/* Audio player frame */
+.pb-audio-frame {
+  border: 2px solid var(--pb-text);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: var(--pb-bg);
+}
+.pb-audio-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--pb-text);
+  margin-bottom: 1rem;
+}
+.pb-audio-element {
+  width: 100%;
+  display: block;
+}
+
+/* Empty state */
+.pb-room-empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 2px dashed var(--pb-hairline);
+  margin-bottom: 2rem;
+}
+.pb-room-empty-title {
+  font-family: var(--font-garamond), "EB Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--pb-text);
+  margin-bottom: 0.5rem;
+}
+.pb-room-empty-sub {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--pb-text-soft);
+}
+
+.pb-room-controls { margin-bottom: 1.5rem; }
+.pb-room-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.pb-room-form { margin-bottom: 0; }
 .pb-room-form-row {
   display: flex;
   gap: 0.75rem;
-  margin-top: 1rem;
   flex-wrap: wrap;
 }
 .pb-room-form-row .pb-input { flex: 1; min-width: 16rem; margin-bottom: 0; }
 .pb-room-hint {
-  margin-top: 0.85rem;
+  margin-top: 1rem;
   font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 0.9rem;
   color: var(--pb-text-soft);
@@ -533,6 +566,7 @@ h1, h2, h3, h4, h5, h6, button {
   font-size: 0.9rem;
   color: var(--pb-text-soft);
   padding-top: 1.25rem;
+  margin-top: 1.5rem;
   border-top: 1px solid var(--pb-hairline);
 }
 

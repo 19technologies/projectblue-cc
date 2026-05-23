@@ -16,10 +16,12 @@ export default function ForgotPasswordPage() {
       return;
     }
     setBusy(true);
+    // Email-driven resets aren't wired during beta. Be honest about it
+    // rather than pretending — the team handles resets manually.
     setTimeout(() => {
-      toast.info("Password reset arrives in the next build.");
+      toast.info("Email hello@projectblue.cc — we reset passwords by hand during beta.");
       setBusy(false);
-    }, 600);
+    }, 400);
   };
 
   return (

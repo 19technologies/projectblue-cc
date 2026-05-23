@@ -15,8 +15,12 @@ const ROOMS_WS =
   process.env.NEXT_PUBLIC_ROOMS_WS ?? "wss://rooms.projectblue.cc";
 
 /* Wire types — mirror rooms/src/protocol.ts */
-interface VideoState {
-  videoId: string;
+type Media =
+  | { kind: "youtube"; videoId: string }
+  | { kind: "audio"; url: string; title?: string };
+
+interface MediaState {
+  media: Media;
   playing: boolean;
   positionSec: number;
   anchorServerMs: number;
@@ -26,10 +30,10 @@ interface Peer {
   name: string;
 }
 type ServerMessage =
-  | { type: "ROOM_STATE"; selfId: string; peers: Peer[]; video: VideoState | null }
+  | { type: "ROOM_STATE"; selfId: string; peers: Peer[]; state: MediaState | null }
   | { type: "PEER_JOINED"; peer: Peer }
   | { type: "PEER_LEFT"; peerId: string }
-  | { type: "PLAYBACK"; video: VideoState }
+  | { type: "MEDIA"; state: MediaState }
   | { type: "PONG"; t0: number; serverMs: number };
 
 const GUEST_ADJ = ["calm", "swift", "warm", "keen", "bright", "quiet", "bold"];
@@ -42,48 +46,81 @@ const guestName = () =>
 export const Room = ({ code }: { code: string }) => {
   const [connected, setConnected] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
-  const [video, setVideo] = useState<VideoState | null>(null);
-  const [urlInput, setUrlInput] = useState("");
+  const [state, setState] = useState<MediaState | null>(null);
+  const [ytUrl, setYtUrl] = useState("");
+  const [showYtForm, setShowYtForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [name] = useState(guestName);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const playerRef = useRef<YTPlayer | null>(null);
-  const playerReady = useRef(false);
+  const ytRef = useRef<YTPlayer | null>(null);
+  const ytReady = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stateRef = useRef<MediaState | null>(null);
   const clockOffset = useRef(0); // serverNow ≈ Date.now() + clockOffset
   const applyingRemote = useRef(false);
-  const currentVideoId = useRef<string | null>(null);
-  const pendingVideo = useRef<VideoState | null>(null);
-  const videoRef = useRef<VideoState | null>(null);
+  const lastMediaKey = useRef<string | null>(null);
 
   const send = (msg: object) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   };
 
-  /* ── Drive the local player to match an authoritative VideoState ─── */
-  const applyPlayback = (v: VideoState) => {
-    videoRef.current = v;
-    setVideo(v);
-    const player = playerRef.current;
-    if (!player || !playerReady.current) {
-      pendingVideo.current = v;
-      return;
-    }
-    const serverNow = Date.now() + clockOffset.current;
-    const target = v.playing
-      ? v.positionSec + (serverNow - v.anchorServerMs) / 1000
-      : v.positionSec;
+  const serverNow = () => Date.now() + clockOffset.current;
+  const targetPosition = (s: MediaState): number =>
+    s.playing ? s.positionSec + (serverNow() - s.anchorServerMs) / 1000 : s.positionSec;
+
+  /* ── Drive the local player to match an authoritative MediaState ─── */
+  const applyState = (s: MediaState) => {
+    stateRef.current = s;
+    setState(s);
+    const target = Math.max(0, targetPosition(s));
+    const mediaKey = `${s.media.kind}:${
+      s.media.kind === "youtube" ? s.media.videoId : s.media.url
+    }`;
+    const mediaChanged = lastMediaKey.current !== mediaKey;
+    lastMediaKey.current = mediaKey;
 
     applyingRemote.current = true;
-    if (currentVideoId.current !== v.videoId) {
-      currentVideoId.current = v.videoId;
-      player.loadVideoById({ videoId: v.videoId, startSeconds: Math.max(0, target) });
-      if (!v.playing) window.setTimeout(() => player.pauseVideo(), 400);
+    if (s.media.kind === "youtube") {
+      const player = ytRef.current;
+      if (!player || !ytReady.current) {
+        // The YT useEffect drains this once the player is ready.
+        window.setTimeout(() => {
+          applyingRemote.current = false;
+        }, 600);
+        return;
+      }
+      if (mediaChanged) {
+        player.loadVideoById({ videoId: s.media.videoId, startSeconds: target });
+        if (!s.playing) window.setTimeout(() => player.pauseVideo(), 400);
+      } else {
+        if (Math.abs(player.getCurrentTime() - target) > 1.5) {
+          player.seekTo(target, true);
+        }
+        if (s.playing && player.getPlayerState() !== YT_PLAYING) player.playVideo();
+        if (!s.playing && player.getPlayerState() === YT_PLAYING) player.pauseVideo();
+      }
     } else {
-      const drift = Math.abs(player.getCurrentTime() - target);
-      if (drift > 1.5) player.seekTo(Math.max(0, target), true);
-      if (v.playing && player.getPlayerState() !== YT_PLAYING) player.playVideo();
-      if (!v.playing && player.getPlayerState() === YT_PLAYING) player.pauseVideo();
+      const audio = audioRef.current;
+      if (!audio) {
+        window.setTimeout(() => {
+          applyingRemote.current = false;
+        }, 600);
+        return;
+      }
+      if (mediaChanged) {
+        audio.src = s.media.url;
+        audio.currentTime = target;
+      } else if (Math.abs(audio.currentTime - target) > 1.5) {
+        audio.currentTime = target;
+      }
+      if (s.playing) {
+        audio.play().catch(() => setAutoplayBlocked(true));
+      } else {
+        audio.pause();
+      }
     }
     window.setTimeout(() => {
       applyingRemote.current = false;
@@ -112,7 +149,7 @@ export const Room = ({ code }: { code: string }) => {
       switch (msg.type) {
         case "ROOM_STATE":
           setPeers(msg.peers);
-          if (msg.video) applyPlayback(msg.video);
+          if (msg.state) applyState(msg.state);
           break;
         case "PEER_JOINED":
           setPeers((p) => [...p.filter((x) => x.id !== msg.peer.id), msg.peer]);
@@ -120,8 +157,8 @@ export const Room = ({ code }: { code: string }) => {
         case "PEER_LEFT":
           setPeers((p) => p.filter((x) => x.id !== msg.peerId));
           break;
-        case "PLAYBACK":
-          applyPlayback(msg.video);
+        case "MEDIA":
+          applyState(msg.state);
           break;
         case "PONG": {
           const t3 = Date.now();
@@ -135,20 +172,31 @@ export const Room = ({ code }: { code: string }) => {
       () => send({ type: "PING", t0: Date.now() }),
       5000
     );
-    // Drift correction — nudge the playhead back if it strays from the anchor.
+    // Drift correction — nudge the playhead back if it strays.
     const drift = window.setInterval(() => {
-      const v = videoRef.current;
-      const player = playerRef.current;
-      if (!v || !v.playing || !player || !playerReady.current) return;
-      if (applyingRemote.current) return;
-      const serverNow = Date.now() + clockOffset.current;
-      const target = v.positionSec + (serverNow - v.anchorServerMs) / 1000;
-      if (Math.abs(player.getCurrentTime() - target) > 1.5) {
-        applyingRemote.current = true;
-        player.seekTo(Math.max(0, target), true);
-        window.setTimeout(() => {
-          applyingRemote.current = false;
-        }, 700);
+      const s = stateRef.current;
+      if (!s || !s.playing || applyingRemote.current) return;
+      const target = targetPosition(s);
+      if (s.media.kind === "youtube") {
+        const p = ytRef.current;
+        if (!p || !ytReady.current) return;
+        if (Math.abs(p.getCurrentTime() - target) > 1.5) {
+          applyingRemote.current = true;
+          p.seekTo(Math.max(0, target), true);
+          window.setTimeout(() => {
+            applyingRemote.current = false;
+          }, 700);
+        }
+      } else {
+        const a = audioRef.current;
+        if (!a) return;
+        if (Math.abs(a.currentTime - target) > 1.5) {
+          applyingRemote.current = true;
+          a.currentTime = Math.max(0, target);
+          window.setTimeout(() => {
+            applyingRemote.current = false;
+          }, 700);
+        }
       }
     }, 1000);
 
@@ -159,53 +207,118 @@ export const Room = ({ code }: { code: string }) => {
     };
   }, [code, name]);
 
-  /* ── YouTube player ──────────────────────────────────────────────── */
+  /* ── YouTube IFrame player ───────────────────────────────────────── */
   useEffect(() => {
     let destroyed = false;
     loadYouTubeAPI()
       .then((YT) => {
         if (destroyed) return;
         const player = new YT.Player("pb-yt-player", {
+          // Explicit "100%" so the iframe fills the .pb-yt-frame container.
+          // (Without these, YT defaults to 640x390 and looks broken.)
+          ...({ width: "100%", height: "100%" } as Record<string, string>),
           playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
           events: {
             onReady: () => {
-              playerReady.current = true;
-              if (pendingVideo.current) {
-                applyPlayback(pendingVideo.current);
-                pendingVideo.current = null;
-              }
+              ytReady.current = true;
+              // Drain pending state if the room set a YT video before ready.
+              const s = stateRef.current;
+              if (s && s.media.kind === "youtube") applyState(s);
             },
             onStateChange: (e) => {
               if (applyingRemote.current) return;
-              const player = playerRef.current;
-              if (!player) return;
-              const pos = player.getCurrentTime();
+              const p = ytRef.current;
+              if (!p) return;
+              const pos = p.getCurrentTime();
               if (e.data === YT_PLAYING) send({ type: "PLAY", positionSec: pos });
               else if (e.data === YT_PAUSED) send({ type: "PAUSE", positionSec: pos });
             },
           },
         });
-        playerRef.current = player;
+        ytRef.current = player;
       })
       .catch(() => toast.error("Couldn't load the YouTube player."));
 
     return () => {
       destroyed = true;
-      playerRef.current?.destroy();
-      playerRef.current = null;
-      playerReady.current = false;
+      ytRef.current?.destroy();
+      ytRef.current = null;
+      ytReady.current = false;
     };
   }, []);
 
-  const onSetVideo = (e: React.FormEvent) => {
+  /* ── Audio element handlers ──────────────────────────────────────── */
+  const onAudioPlay = () => {
+    if (applyingRemote.current) return;
+    const a = audioRef.current;
+    if (!a) return;
+    setAutoplayBlocked(false);
+    send({ type: "PLAY", positionSec: a.currentTime });
+  };
+  const onAudioPause = () => {
+    if (applyingRemote.current) return;
+    const a = audioRef.current;
+    if (!a) return;
+    send({ type: "PAUSE", positionSec: a.currentTime });
+  };
+  const onAudioSeeked = () => {
+    if (applyingRemote.current) return;
+    const a = audioRef.current;
+    if (!a) return;
+    send({ type: "SEEK", positionSec: a.currentTime });
+  };
+
+  /* ── Upload + URL actions ────────────────────────────────────────── */
+  const onUploadFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.slice(result.indexOf(",") + 1));
+        };
+        reader.onerror = () => reject(new Error("read failed"));
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload/audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentType: file.type,
+          base64,
+          title: file.name,
+        }),
+      });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(error || "Upload failed.");
+        return;
+      }
+      const { url, title } = (await res.json()) as { url: string; title: string };
+      send({ type: "SET_MEDIA", media: { kind: "audio", url, title } });
+      toast.success(`Loaded "${title}"`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onSetYouTube = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = extractVideoId(urlInput);
+    const id = extractVideoId(ytUrl);
     if (!id) {
       toast.error("Paste a YouTube link or 11-character video ID.");
       return;
     }
-    send({ type: "SET_VIDEO", videoId: id });
-    setUrlInput("");
+    send({ type: "SET_MEDIA", media: { kind: "youtube", videoId: id } });
+    setYtUrl("");
+    setShowYtForm(false);
+  };
+
+  const onResyncTap = () => {
+    setAutoplayBlocked(false);
+    const s = stateRef.current;
+    if (s) applyState(s);
   };
 
   const onCopyCode = async () => {
@@ -216,6 +329,9 @@ export const Room = ({ code }: { code: string }) => {
       toast.error("Copy failed — copy it manually.");
     }
   };
+
+  const isYouTube = state?.media.kind === "youtube";
+  const isAudio = state?.media.kind === "audio";
 
   return (
     <div className="pb-welcome pb-room">
@@ -234,42 +350,97 @@ export const Room = ({ code }: { code: string }) => {
       </header>
 
       <main id="main" className="pb-welcome-main pb-room-main">
-        <div className="pb-yt-frame">
+        {/* YouTube frame — present but hidden when the media isn't YT.
+            The YT.Player needs to mount its iframe on a real element on
+            first render, so we keep the container in the tree always. */}
+        <div className="pb-yt-frame" style={{ display: isYouTube ? "block" : "none" }}>
           <div id="pb-yt-player" className="pb-yt-player" />
-          {!video && (
-            <div className="pb-yt-empty">
-              <p>No video yet. Paste a YouTube link to start.</p>
-            </div>
-          )}
         </div>
 
-        <form onSubmit={onSetVideo} className="pb-room-form">
-          <label className="pb-action-label" htmlFor="yt-url">
-            {video ? "Change video" : "Set a video"}
-          </label>
-          <div className="pb-room-form-row">
-            <input
-              id="yt-url"
-              type="text"
-              className="pb-input"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://youtube.com/watch?v=…"
+        {/* Audio player */}
+        {isAudio && state?.media.kind === "audio" && (
+          <div className="pb-audio-frame">
+            <p className="pb-audio-title">{state.media.title ?? "Now playing"}</p>
+            <audio
+              ref={audioRef}
+              controls
+              preload="auto"
+              onPlay={onAudioPlay}
+              onPause={onAudioPause}
+              onSeeked={onAudioSeeked}
+              className="pb-audio-element"
             />
-            <button type="submit" className="pb-action-btn">
-              Load
+          </div>
+        )}
+
+        {/* Empty state — show both load options */}
+        {!state && (
+          <div className="pb-room-empty">
+            <p className="pb-room-empty-title">Nothing playing yet.</p>
+            <p className="pb-room-empty-sub">
+              Load music from your device, or paste a YouTube link.
+            </p>
+          </div>
+        )}
+
+        {autoplayBlocked && (
+          <button type="button" onClick={onResyncTap} className="pb-action-btn pb-action-btn-secondary" style={{ marginBottom: "1.5rem" }}>
+            Tap to start playback (browser blocked autoplay)
+          </button>
+        )}
+
+        {/* Load controls — always available so you can swap mid-room */}
+        <section className="pb-room-controls">
+          <p className="pb-action-label" style={{ marginBottom: "1rem" }}>
+            {state ? "Change media" : "What are we listening to?"}
+          </p>
+          <div className="pb-room-actions">
+            <label className="pb-action-btn" style={{ cursor: uploading ? "progress" : "pointer" }}>
+              {uploading ? "Uploading…" : "Upload music"}
+              <input
+                type="file"
+                accept="audio/*"
+                disabled={uploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onUploadFile(f);
+                  e.target.value = "";
+                }}
+                style={{ display: "none" }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowYtForm((v) => !v)}
+              className="pb-action-btn pb-action-btn-secondary"
+            >
+              {showYtForm ? "Cancel" : "Add YouTube link"}
             </button>
           </div>
+          {showYtForm && (
+            <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "1rem" }}>
+              <div className="pb-room-form-row">
+                <input
+                  type="text"
+                  className="pb-input"
+                  value={ytUrl}
+                  onChange={(e) => setYtUrl(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=…"
+                  autoFocus
+                />
+                <button type="submit" className="pb-action-btn">Load</button>
+              </div>
+            </form>
+          )}
           <p className="pb-room-hint">
-            Play, pause and seek stay in sync for everyone in the room. Share
-            the code <strong>{code}</strong> to bring people in.
+            Play, pause and seek stay in sync. Share <strong>{code}</strong> to
+            bring people in. Audio uploads are capped at 15&nbsp;MB.
           </p>
-        </form>
+        </section>
 
         {peers.length > 0 && (
           <p className="pb-room-peers">
-            In the room:{" "}
-            {peers.map((p) => p.name).join(", ")}
+            In the room: {peers.map((p) => p.name).join(", ")}
           </p>
         )}
       </main>
