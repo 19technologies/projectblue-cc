@@ -86,12 +86,16 @@ const formatChatTime = (ts: number): string => {
 const DESKTOP_MIN_PX = 900;
 
 const useIsDesktop = (): boolean => {
-  const [isDesktop, setIsDesktop] = useState(false);
+  // Read matchMedia synchronously on the first client render so desktop
+  // users don't see a brief flash of the mobile layout. SSR is impossible
+  // here — the parent uses dynamic({ ssr: false }) — so `window` is safe.
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(min-width: ${DESKTOP_MIN_PX}px)`).matches;
+  });
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const mq = window.matchMedia(`(min-width: ${DESKTOP_MIN_PX}px)`);
     const apply = () => setIsDesktop(mq.matches);
-    apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
@@ -125,11 +129,15 @@ const isLikelyAudio = (f: File): boolean => {
 };
 
 /** Upload a single file → returns the queueable Media descriptor. Throws on failure. */
-async function uploadAudioFile(file: File): Promise<{ url: string; title: string }> {
+async function uploadAudioFile(
+  file: File,
+  signal?: AbortSignal
+): Promise<{ url: string; title: string }> {
   const guessed = file.type || guessAudioType(file.name);
   const res = await fetch("/api/upload/audio", {
     method: "POST",
     body: file,
+    signal,
     headers: {
       "Content-Type": guessed || "application/octet-stream",
       "X-Filename": encodeURIComponent(file.name),
@@ -214,6 +222,16 @@ export const Room = ({ code }: { code: string }) => {
   const endHandledForKey = useRef<string | null>(null);
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  /** Controller for in-flight uploads — aborted on unmount so we don't
+   *  call setState after the component is gone. */
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  /** Counter for dragenter/dragleave — flat equality check (currentTarget
+   *  === target) flickers as you cross child boundaries. */
+  const dragCounterRef = useRef(0);
+  /** Debounce timer for volume → localStorage. */
+  const volumeWriteTimerRef = useRef<number | null>(null);
+  /** Mirror of volume for unmount-time flush (closure would capture stale value). */
+  const volumeRef = useRef<number>(0);
 
   /* Persist the first-ever generated name so reconnects keep the same handle. */
   useEffect(() => {
@@ -255,7 +273,9 @@ export const Room = ({ code }: { code: string }) => {
   };
 
   /* Apply volume to both pipes whenever the slider moves. Local-only —
-     each user has their own gain; nothing syncs to the room. */
+     each user has their own gain; nothing syncs to the room. The
+     localStorage write is debounced so dragging the slider doesn't thrash
+     storage (mobile Safari serialises every write to disk). */
   useEffect(() => {
     if (gainRef.current) gainRef.current.gain.value = volume;
     const yt = ytRef.current;
@@ -266,12 +286,34 @@ export const Room = ({ code }: { code: string }) => {
         /* player may not be ready */
       }
     }
-    try {
-      localStorage.setItem("pb-volume", String(volume));
-    } catch {
-      /* storage disabled */
+    volumeRef.current = volume;
+    if (volumeWriteTimerRef.current !== null) {
+      window.clearTimeout(volumeWriteTimerRef.current);
     }
+    volumeWriteTimerRef.current = window.setTimeout(() => {
+      volumeWriteTimerRef.current = null;
+      try {
+        localStorage.setItem("pb-volume", String(volume));
+      } catch {
+        /* storage disabled */
+      }
+    }, 250);
   }, [volume]);
+  // Flush the pending debounce on unmount so the last value isn't lost,
+  // and abort any in-flight uploads so we don't setState post-unmount.
+  useEffect(() => {
+    return () => {
+      if (volumeWriteTimerRef.current !== null) {
+        window.clearTimeout(volumeWriteTimerRef.current);
+        try {
+          localStorage.setItem("pb-volume", String(volumeRef.current));
+        } catch {
+          /* storage disabled */
+        }
+      }
+      uploadAbortRef.current?.abort();
+    };
+  }, []);
 
   const stopSource = () => {
     const src = sourceRef.current;
@@ -435,91 +477,135 @@ export const Room = ({ code }: { code: string }) => {
     }, 700);
   };
 
-  /* ── WebSocket lifecycle + NTP burst ──────────────────────────────── */
+  /* ── WebSocket lifecycle + NTP burst + auto-reconnect ─────────────── */
   useEffect(() => {
-    const ws = new WebSocket(`${ROOMS_WS}/room/${code}`);
-    wsRef.current = ws;
+    let disposed = false;
+    let pingTimer: number | null = null;
+    const burstTimers: number[] = [];
+    let reconnectTimer: number | null = null;
+    let reconnectAttempts = 0;
 
     const sendPing = () => send({ type: "PING", t0: Date.now() });
-    const burstTimers: number[] = [];
 
-    ws.onopen = () => {
-      setConnected(true);
-      send({ type: "HELLO", clientId: crypto.randomUUID(), name });
-      // Burst: 8 pings @ 100ms — settles clockOffset to ~5ms before any PLAY.
-      for (let i = 0; i < 8; i++) {
-        burstTimers.push(window.setTimeout(sendPing, i * 100));
-      }
-    };
-    ws.onclose = () => setConnected(false);
-    ws.onerror = () => setConnected(false);
-    ws.onmessage = (event) => {
-      let msg: ServerMessage;
-      try {
-        msg = JSON.parse(event.data as string) as ServerMessage;
-      } catch {
-        return;
-      }
-      switch (msg.type) {
-        case "ROOM_STATE":
-          setPeers(msg.peers);
-          setSelfId(msg.selfId);
-          setHostId(msg.hostId);
-          setQueue(msg.queue);
-          setChat(msg.chat);
-          if (msg.state) applyState(msg.state);
-          break;
-        case "PEER_JOINED":
-          setPeers((p) => [...p.filter((x) => x.id !== msg.peer.id), msg.peer]);
-          break;
-        case "PEER_LEFT":
-          setPeers((p) => p.filter((x) => x.id !== msg.peerId));
-          break;
-        case "HOST":
-          setHostId(msg.hostId);
-          break;
-        case "MEDIA":
-          applyState(msg.state);
-          break;
-        case "QUEUE":
-          setQueue(msg.queue);
-          break;
-        case "CHAT":
-          setChat((c) => [...c, msg.msg]);
-          break;
-        case "PONG": {
-          const t3 = Date.now();
-          const rtt = Math.max(1, t3 - msg.t0);
-          const offset = msg.serverMs - (msg.t0 + t3) / 2;
-          const samples = clockSamplesRef.current;
-          samples.push({ offset, rtt });
-          if (samples.length > 50) samples.shift();
-          // Lowest-RTT quartile, then median — beatsync-style robust estimator.
-          const sorted = [...samples].sort((a, b) => a.rtt - b.rtt);
-          const take = Math.max(1, Math.ceil(sorted.length / 4));
-          const best = sorted
-            .slice(0, take)
-            .map((x) => x.offset)
-            .sort((a, b) => a - b);
-          clockOffsetRef.current = best[Math.floor(best.length / 2)];
-          break;
+    const connect = () => {
+      if (disposed) return;
+      const ws = new WebSocket(`${ROOMS_WS}/room/${code}`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        setConnected(true);
+        send({ type: "HELLO", clientId: crypto.randomUUID(), name });
+        // Burst: 8 pings @ 100ms — settles clockOffset to ~5ms before any PLAY.
+        for (let i = 0; i < 8; i++) {
+          burstTimers.push(window.setTimeout(sendPing, i * 100));
         }
-        case "ERROR":
-          if (msg.code === "NOT_HOST") {
-            toast.error("Only the host can control playback.");
-          } else if (msg.message) {
-            toast.error(msg.message);
+        if (pingTimer !== null) window.clearInterval(pingTimer);
+        pingTimer = window.setInterval(sendPing, 3000);
+      };
+      ws.onclose = () => {
+        setConnected(false);
+        if (pingTimer !== null) {
+          window.clearInterval(pingTimer);
+          pingTimer = null;
+        }
+        if (disposed) return;
+        // Exponential backoff with jitter, capped at 15s. Browsers fire
+        // `close` on network flap; without this, the user would have to
+        // refresh.
+        const delay =
+          Math.min(15_000, 500 * Math.pow(2, reconnectAttempts)) +
+          Math.floor(Math.random() * 250);
+        reconnectAttempts += 1;
+        reconnectTimer = window.setTimeout(connect, delay);
+      };
+      ws.onerror = () => {
+        // onerror always pairs with onclose — let close drive reconnect.
+        setConnected(false);
+      };
+      ws.onmessage = (event) => {
+        let msg: ServerMessage;
+        try {
+          msg = JSON.parse(event.data as string) as ServerMessage;
+        } catch {
+          return;
+        }
+        switch (msg.type) {
+          case "ROOM_STATE":
+            setPeers(msg.peers);
+            setSelfId(msg.selfId);
+            setHostId(msg.hostId);
+            setQueue(msg.queue);
+            setChat(msg.chat);
+            if (msg.state) applyState(msg.state);
+            break;
+          case "PEER_JOINED":
+            setPeers((p) => [...p.filter((x) => x.id !== msg.peer.id), msg.peer]);
+            break;
+          case "PEER_LEFT":
+            setPeers((p) => p.filter((x) => x.id !== msg.peerId));
+            break;
+          case "HOST":
+            setHostId(msg.hostId);
+            break;
+          case "MEDIA":
+            applyState(msg.state);
+            break;
+          case "QUEUE":
+            setQueue(msg.queue);
+            break;
+          case "CHAT":
+            setChat((c) => [...c, msg.msg]);
+            break;
+          case "PONG": {
+            const t3 = Date.now();
+            const rtt = Math.max(1, t3 - msg.t0);
+            const offset = msg.serverMs - (msg.t0 + t3) / 2;
+            const samples = clockSamplesRef.current;
+            samples.push({ offset, rtt });
+            if (samples.length > 50) samples.shift();
+            // Lowest-RTT quartile, then median — beatsync-style robust estimator.
+            const sorted = [...samples].sort((a, b) => a.rtt - b.rtt);
+            const take = Math.max(1, Math.ceil(sorted.length / 4));
+            const best = sorted
+              .slice(0, take)
+              .map((x) => x.offset)
+              .sort((a, b) => a - b);
+            clockOffsetRef.current = best[Math.floor(best.length / 2)];
+            break;
           }
-          break;
-      }
+          case "ERROR":
+            if (msg.code === "NOT_HOST") {
+              toast.error("Only the host can control playback.");
+            } else if (msg.message) {
+              toast.error(msg.message);
+            }
+            break;
+        }
+      };
     };
 
-    const ping = window.setInterval(sendPing, 3000);
+    connect();
 
     return () => {
+      disposed = true;
       burstTimers.forEach((t) => window.clearTimeout(t));
-      window.clearInterval(ping);
-      ws.close();
+      if (pingTimer !== null) window.clearInterval(pingTimer);
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      // Clear handlers before close so a late onclose doesn't kick off a
+      // reconnect that lives past unmount.
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        try {
+          ws.close();
+        } catch {
+          /* already closing */
+        }
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, name]);
@@ -634,10 +720,15 @@ export const Room = ({ code }: { code: string }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Auto-scroll chat to bottom on new message ───────────────────── */
+  /* ── Auto-scroll chat to bottom on new message, but only if the user
+   *  was already near the bottom — don't yank them out of history. */
   useEffect(() => {
     const el = chatScrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    if (distanceFromBottom < 80) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [chat.length]);
 
   /* ── Host control handlers ────────────────────────────────────────── */
@@ -690,6 +781,11 @@ export const Room = ({ code }: { code: string }) => {
     }
     if (audio.length === 0) return;
 
+    // Cancel any prior in-flight batch.
+    uploadAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    uploadAbortRef.current = ctrl;
+
     setUploading(true);
     setUploadProgress({ done: 0, total: audio.length });
     // Prime AudioContext on the user gesture so playback isn't blocked later.
@@ -700,14 +796,23 @@ export const Room = ({ code }: { code: string }) => {
 
     // Serial uploads — predictable for the user, gentle on the Worker CPU.
     for (let i = 0; i < audio.length; i++) {
+      if (ctrl.signal.aborted) break;
       const file = audio[i];
       try {
-        const { url, title } = await uploadAudioFile(file);
+        const { url, title } = await uploadAudioFile(file, ctrl.signal);
         uploaded.push({ kind: "audio", url, title });
       } catch (err) {
+        if (ctrl.signal.aborted) break;
         failures.push(`${file.name}: ${(err as Error).message}`);
       }
-      setUploadProgress({ done: i + 1, total: audio.length });
+      if (!ctrl.signal.aborted) {
+        setUploadProgress({ done: i + 1, total: audio.length });
+      }
+    }
+
+    if (ctrl.signal.aborted) {
+      uploadAbortRef.current = null;
+      return;
     }
 
     if (uploaded.length > 0) {
@@ -731,22 +836,32 @@ export const Room = ({ code }: { code: string }) => {
     }
     setUploading(false);
     setUploadProgress(null);
+    uploadAbortRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    dragCounterRef.current = 0;
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) void onUploadFiles(files);
   };
   const onDragOver = (e: React.DragEvent) => {
+    // Required so the drop event fires at all.
     e.preventDefault();
-    if (e.dataTransfer.types.includes("Files") && !dragOver) setDragOver(true);
   };
-  const onDragLeave = (e: React.DragEvent) => {
-    // Ignore enter/leave between children.
-    if (e.currentTarget === e.target) setDragOver(false);
+  const onDragEnter = (e: React.DragEvent) => {
+    // Counter-based tracking — `currentTarget === target` flickers as you
+    // move over child nodes because dragleave fires per element.
+    const types = e.dataTransfer?.types;
+    if (!types || !Array.from(types).includes("Files")) return;
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setDragOver(true);
+  };
+  const onDragLeave = () => {
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setDragOver(false);
   };
 
   const onSetYouTube = (e: React.FormEvent) => {
@@ -814,6 +929,7 @@ export const Room = ({ code }: { code: string }) => {
       aria-label="Queue"
       onDrop={onDrop}
       onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
     >
       <header className="pb-side-head">

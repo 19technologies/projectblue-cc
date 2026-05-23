@@ -43,9 +43,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Fast-reject on Content-Length when present so we don't read 50 MB
-  // of bytes just to throw them away.
-  const declared = Number(req.headers.get("Content-Length") ?? "0");
+  // Require a known body size. Chunked requests without Content-Length
+  // would force us to buffer up to CF Workers' 100 MB body cap before we
+  // could check the size — wasting CPU and memory on uploads we'd reject.
+  const declaredRaw = req.headers.get("Content-Length");
+  const declared = declaredRaw === null ? NaN : Number(declaredRaw);
+  if (!Number.isFinite(declared) || declared <= 0) {
+    return NextResponse.json(
+      { error: "Content-Length is required." },
+      { status: 411 }
+    );
+  }
   if (declared > MAX_AUDIO_BYTES) {
     return NextResponse.json(
       { error: `Audio too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB).` },

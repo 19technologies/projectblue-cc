@@ -15,7 +15,7 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { promises as fs } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { getKV } from "./kv";
 
 const META = (id: string) => `audio:${id}:m`;
@@ -72,8 +72,11 @@ const sanitize = (s: string): string =>
    all JSON). Audio bytes bypass it and talk to the namespace directly,
    keeping the abstraction small. */
 
+/** Surface of the Cloudflare KV binding we actually use for binary blobs —
+ *  a deliberate subset of KVNamespace<string> so the call sites are typed
+ *  correctly even when @cloudflare/workers-types isn't reachable here. */
 interface BinaryNamespace {
-  put(key: string, value: ArrayBuffer): Promise<void>;
+  put(key: string, value: ArrayBuffer | ArrayBufferView): Promise<void>;
   get(key: string, type: "arrayBuffer"): Promise<ArrayBuffer | null>;
   delete(key: string): Promise<void>;
 }
@@ -81,6 +84,7 @@ interface BinaryNamespace {
 interface BinaryStore {
   put(id: string, bytes: ArrayBuffer): Promise<void>;
   get(id: string): Promise<ArrayBuffer | null>;
+  delete(id: string): Promise<void>;
 }
 
 class CloudflareBinary implements BinaryStore {
@@ -90,6 +94,9 @@ class CloudflareBinary implements BinaryStore {
   }
   get(id: string): Promise<ArrayBuffer | null> {
     return this.ns.get(DATA(id), "arrayBuffer");
+  }
+  delete(id: string): Promise<void> {
+    return this.ns.delete(DATA(id));
   }
 }
 
@@ -102,12 +109,22 @@ class FileBinary implements BinaryStore {
   async get(id: string): Promise<ArrayBuffer | null> {
     try {
       const buf = await fs.readFile(join(this.dir, id));
-      // Slice into a fresh ArrayBuffer so we don't hand callers a view
-      // into Node's internal pool.
-      return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+      // Real copy — Node's Buffer.buffer is shared across reads from the
+      // internal pool, so a slice() of the parent is still a view onto
+      // memory Node may reuse. Allocate a fresh ArrayBuffer.
+      const out = new ArrayBuffer(buf.byteLength);
+      new Uint8Array(out).set(buf);
+      return out;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw err;
+    }
+  }
+  async delete(id: string): Promise<void> {
+    try {
+      await fs.unlink(join(this.dir, id));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     }
   }
 }
@@ -123,10 +140,9 @@ function getBinaryStore(): BinaryStore {
     /* not on the Cloudflare runtime — fall through */
   }
   if (!fileBin) {
-    const file = join(process.cwd(), ".kv-dev", "audio", ".keep");
-    // Touch the parent so the first put doesn't race a missing dir.
-    void fs.mkdir(dirname(file), { recursive: true }).catch(() => {});
-    fileBin = new FileBinary(dirname(file));
+    // The FileBinary.put creates the dir lazily — no fire-and-forget mkdir
+    // here that would race the first write.
+    fileBin = new FileBinary(join(process.cwd(), ".kv-dev", "audio"));
   }
   return fileBin;
 }
@@ -145,10 +161,17 @@ export async function saveAudio(input: {
     title: sanitize(input.title),
     uploadedAt: new Date().toISOString(),
   };
-  await Promise.all([
-    getKV().put<AudioMeta>(META(id), meta),
-    getBinaryStore().put(id, input.bytes),
-  ]);
+  // Write the bytes FIRST, then the metadata. If the second write fails
+  // we delete the blob — getAudio() checks both, so the worst case is an
+  // unreferenced data blob (no broken metadata pointing nowhere).
+  const bin = getBinaryStore();
+  await bin.put(id, input.bytes);
+  try {
+    await getKV().put<AudioMeta>(META(id), meta);
+  } catch (err) {
+    void bin.delete(id).catch(() => {});
+    throw err;
+  }
   return { id, url: `/api/audio/${id}`, title: meta.title };
 }
 

@@ -17,6 +17,7 @@
  * absent peer.
  */
 
+import { DurableObject } from "cloudflare:workers";
 import {
   encode,
   parseClientMessage,
@@ -93,7 +94,7 @@ const SK = {
   chat: "v1:chat",
 } as const;
 
-export class RoomDO {
+export class RoomDO extends DurableObject<Env> {
   private sessions = new Set<Session>();
   private state: MediaState | null = null;
   private queue: QueueItem[] = [];
@@ -102,13 +103,15 @@ export class RoomDO {
   private joinCounter = 0;
   private chatBuckets = new Map<string, number[]>();
 
-  constructor(private readonly doState: DurableObjectState) {
-    // Hydrate persisted state before the first request lands.
-    this.doState.blockConcurrencyWhile(async () => {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    // Hydrate persisted state before any fetch() is dispatched —
+    // blockConcurrencyWhile defers incoming work until this resolves.
+    ctx.blockConcurrencyWhile(async () => {
       const [s, q, c] = await Promise.all([
-        this.doState.storage.get<MediaState>(SK.state),
-        this.doState.storage.get<QueueItem[]>(SK.queue),
-        this.doState.storage.get<ChatMsg[]>(SK.chat),
+        ctx.storage.get<MediaState>(SK.state),
+        ctx.storage.get<QueueItem[]>(SK.queue),
+        ctx.storage.get<ChatMsg[]>(SK.chat),
       ]);
       if (s) this.state = s;
       if (q) this.queue = q;
@@ -163,7 +166,7 @@ export class RoomDO {
   /** Fire-and-forget storage write. Failure is non-fatal — the live state
    *  is in-memory; persistence is best-effort recovery for evictions. */
   private persist(key: (typeof SK)[keyof typeof SK], value: unknown) {
-    void this.doState.storage.put(key, value).catch(() => {});
+    void this.ctx.storage.put(key, value).catch(() => {});
   }
 
   /** Re-anchor playback state to "now" so late joiners compute the right
@@ -181,6 +184,9 @@ export class RoomDO {
       positionSec: this.state.positionSec + elapsed,
       anchorServerMs: now,
     };
+    // Persist so a DO eviction immediately after doesn't drop the freshened
+    // anchor (the next late joiner would otherwise read the stale one).
+    this.persist(SK.state, this.state);
     return this.state;
   }
 
