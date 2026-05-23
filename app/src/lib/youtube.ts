@@ -30,9 +30,12 @@ interface YTNamespace {
     opts: {
       videoId?: string;
       playerVars?: Record<string, number | string>;
+      width?: number | string;
+      height?: number | string;
       events?: {
         onReady?: () => void;
         onStateChange?: (e: { data: number }) => void;
+        onError?: (e: { data: number }) => void;
       };
     }
   ) => YTPlayer;

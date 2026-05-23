@@ -54,6 +54,15 @@ interface Session {
   helloed: boolean;
 }
 
+/**
+ * Lead time on PLAY / play-while-SEEK so every client can schedule the
+ * audio start at the *same* server timestamp. Without this, the first
+ * client starts ~immediately and the second starts after one network
+ * hop — they drift by the propagation delta. 250ms is enough for the
+ * slowest realistic connection while still feeling instantaneous.
+ */
+const SCHEDULE_LEAD_MS = 250;
+
 export class RoomDO {
   private sessions = new Set<Session>();
   private state: MediaState | null = null;
@@ -102,18 +111,20 @@ export class RoomDO {
   }
 
   /** Re-anchor playback state to "now" so late joiners compute the right
-   *  playhead. */
+   *  playhead. We skip the re-anchor when the existing anchor is still in
+   *  the future (within the SCHEDULE_LEAD window) — those clients should
+   *  schedule from the original target so they line up with peers. */
   private freshenState(): MediaState | null {
     if (!this.state) return null;
+    if (!this.state.playing) return this.state;
     const now = Date.now();
-    if (this.state.playing) {
-      const elapsed = (now - this.state.anchorServerMs) / 1000;
-      this.state = {
-        ...this.state,
-        positionSec: this.state.positionSec + elapsed,
-        anchorServerMs: now,
-      };
-    }
+    const elapsed = (now - this.state.anchorServerMs) / 1000;
+    if (elapsed <= 0) return this.state;
+    this.state = {
+      ...this.state,
+      positionSec: this.state.positionSec + elapsed,
+      anchorServerMs: now,
+    };
     return this.state;
   }
 
@@ -153,7 +164,7 @@ export class RoomDO {
           ...this.state,
           playing: true,
           positionSec: msg.positionSec,
-          anchorServerMs: Date.now(),
+          anchorServerMs: Date.now() + SCHEDULE_LEAD_MS,
         };
         this.broadcast({ type: "MEDIA", state: this.state });
         break;
@@ -171,10 +182,11 @@ export class RoomDO {
       }
       case "SEEK": {
         if (!this.state) return;
+        const lead = this.state.playing ? SCHEDULE_LEAD_MS : 0;
         this.state = {
           ...this.state,
           positionSec: msg.positionSec,
-          anchorServerMs: Date.now(),
+          anchorServerMs: Date.now() + lead,
         };
         this.broadcast({ type: "MEDIA", state: this.state });
         break;

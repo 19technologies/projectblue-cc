@@ -518,9 +518,53 @@ h1, h2, h3, h4, h5, h6, button {
   color: var(--pb-text);
   margin-bottom: 1rem;
 }
-.pb-audio-element {
-  width: 100%;
-  display: block;
+/* Custom audio surface — Web Audio API drives playback, these controls
+   are pure UI. We don't use an <audio> element because it can't be
+   precision-scheduled. */
+.pb-audio-loading {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--pb-text-soft);
+  font-style: italic;
+}
+.pb-audio-player {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.pb-audio-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 1px solid var(--pb-ink);
+  background: var(--pb-ink);
+  color: var(--pb-bg);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  flex-shrink: 0;
+}
+.pb-audio-btn:hover {
+  background: var(--pb-accent);
+  border-color: var(--pb-accent);
+}
+.pb-audio-time {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: var(--pb-text-soft);
+  min-width: 3.25rem;
+  text-align: center;
+}
+.pb-audio-seek {
+  flex: 1;
+  height: 0.35rem;
+  cursor: pointer;
+  accent-color: var(--pb-accent);
 }
 
 /* Empty state */
