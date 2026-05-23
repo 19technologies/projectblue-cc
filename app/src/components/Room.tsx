@@ -868,8 +868,8 @@ export const Room = ({ code }: { code: string }) => {
       }
       toast.success(
         uploaded.length === 1
-          ? `Queued "${(uploaded[0] as { title?: string }).title ?? "track"}"`
-          : `Queued ${uploaded.length} tracks`
+          ? `Added "${(uploaded[0] as { title?: string }).title ?? "track"}" to playlist`
+          : `Added ${uploaded.length} tracks to playlist`
       );
     }
     if (failures.length > 0) {
@@ -964,7 +964,11 @@ export const Room = ({ code }: { code: string }) => {
     }
     setYtUrl("");
     setShowYtForm(false);
-    toast.success(ids.length === 1 ? "Added to queue" : `Added ${ids.length} videos`);
+    toast.success(
+      ids.length === 1
+        ? "Added to playlist"
+        : `Added ${ids.length} videos to playlist`
+    );
   };
 
   /* ── Chat ─────────────────────────────────────────────────────────── */
@@ -1005,7 +1009,7 @@ export const Room = ({ code }: { code: string }) => {
   const queuePanel = (
     <section
       className={`pb-side-panel pb-side-queue ${dragOver ? "is-drop-target" : ""}`}
-      aria-label="Queue"
+      aria-label="Playlist"
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
@@ -1019,7 +1023,7 @@ export const Room = ({ code }: { code: string }) => {
             type="button"
             className="pb-side-action"
             onClick={onClearQueue}
-            title="Clear queue"
+            title="Clear playlist"
           >
             Clear
           </button>
@@ -1085,7 +1089,7 @@ export const Room = ({ code }: { code: string }) => {
                       className="pb-queue-btn pb-queue-btn-faint"
                       onClick={() => onRemoveQueueItem(item)}
                       title="Remove"
-                      aria-label="Remove from queue"
+                      aria-label="Remove from playlist"
                     >
                       ×
                     </button>
@@ -1307,7 +1311,7 @@ export const Room = ({ code }: { code: string }) => {
               <p className="pb-room-empty-title">Nothing playing yet.</p>
               <p className="pb-room-empty-sub">
                 {isHost
-                  ? "Drop tracks into the queue — the first one plays right away."
+                  ? "Drop tracks into the playlist — the first one plays right away."
                   : hostPeer
                     ? `Waiting for ${hostPeer.name} to start something.`
                     : "Waiting for someone to take the host seat."}
