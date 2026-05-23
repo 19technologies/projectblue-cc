@@ -11,14 +11,19 @@ import { NextResponse } from "next/server";
 /**
  * Upload an audio file to be played in a room.
  *
- * Body: { contentType, base64, title } — the client reads the file with
- * FileReader and posts JSON (no multipart parsing on the worker).
+ * Wire format: raw binary body, `Content-Type` is the file's MIME, the
+ * original filename is URI-encoded in `X-Filename`. No multipart, no
+ * JSON, no base64 — those round-trips were spending the Worker's CPU
+ * budget on parse work and surfacing as a generic "Upload failed".
  *
  * Gated by the beta cookie — uploads cost storage, so only redeemed
  * testers can do it. A guessed room code alone isn't enough.
  */
 export async function POST(req: Request) {
-  const session = await getIronSession<BetaSession>(await cookies(), betaSessionOptions);
+  const session = await getIronSession<BetaSession>(
+    await cookies(),
+    betaSessionOptions
+  );
   if (!session.code) {
     return NextResponse.json(
       { error: "Beta access required to upload audio" },
@@ -26,38 +31,52 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { contentType?: string; base64?: string; title?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
-  const { contentType, base64, title } = body;
-  if (!contentType || !base64) {
+  const contentType = (req.headers.get("Content-Type") ?? "").split(";")[0].trim();
+  if (!contentType || !ALLOWED_AUDIO_TYPES.includes(contentType)) {
     return NextResponse.json(
-      { error: "contentType and base64 required" },
+      {
+        error: contentType
+          ? `Unsupported audio format (${contentType}).`
+          : "Missing audio Content-Type header.",
+      },
       { status: 400 }
     );
   }
-  if (!ALLOWED_AUDIO_TYPES.includes(contentType)) {
+
+  // Fast-reject on Content-Length when present so we don't read 50 MB
+  // of bytes just to throw them away.
+  const declared = Number(req.headers.get("Content-Length") ?? "0");
+  if (declared > MAX_AUDIO_BYTES) {
     return NextResponse.json(
-      { error: "Unsupported audio format" },
-      { status: 400 }
-    );
-  }
-  // base64 inflates ~4/3; check the decoded size.
-  const approxBytes = Math.floor((base64.length * 3) / 4);
-  if (approxBytes > MAX_AUDIO_BYTES) {
-    return NextResponse.json(
-      { error: `Audio too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB)` },
+      { error: `Audio too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB).` },
       { status: 413 }
     );
   }
 
-  const saved = await saveAudio({
-    contentType,
-    base64,
-    title: title ?? "untitled",
-  });
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await req.arrayBuffer();
+  } catch {
+    return NextResponse.json({ error: "Couldn't read upload body." }, { status: 400 });
+  }
+  if (bytes.byteLength === 0) {
+    return NextResponse.json({ error: "Empty file." }, { status: 400 });
+  }
+  if (bytes.byteLength > MAX_AUDIO_BYTES) {
+    return NextResponse.json(
+      { error: `Audio too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB).` },
+      { status: 413 }
+    );
+  }
+
+  const rawName = req.headers.get("X-Filename") ?? "untitled";
+  let title = rawName;
+  try {
+    title = decodeURIComponent(rawName);
+  } catch {
+    /* keep raw if it isn't valid percent-encoding */
+  }
+
+  const saved = await saveAudio({ contentType, bytes, title });
   return NextResponse.json(saved, { status: 201 });
 }

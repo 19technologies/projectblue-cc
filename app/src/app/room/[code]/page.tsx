@@ -1,11 +1,6 @@
-import { Room } from "@/components/Room";
+import RoomShell from "@/components/RoomShell";
 import { ROOM_CODE_REGEX } from "@/lib/roomCode";
-import { betaSessionOptions, type BetaSession } from "@/lib/sessions";
-import { getIronSession } from "iron-session";
-import { cookies, headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
-
-export const dynamic = "force-dynamic";
+import { notFound } from "next/navigation";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -16,20 +11,13 @@ export async function generateMetadata({ params }: Props) {
   return { title: `Room ${code.toUpperCase()}` };
 }
 
+// The beta gate runs as a zero-JS redirect in next.config.ts. The page
+// itself is intentionally tiny: a dynamic param, a regex check, and a
+// client-only shell. Anything heavier and a single 6-char path lookup
+// could exceed the Worker CPU budget (Error 1102).
 export default async function RoomPage({ params }: Props) {
   const { code: raw } = await params;
   const code = raw.toUpperCase();
   if (!ROOM_CODE_REGEX.test(code)) notFound();
-
-  // Gate the room on the beta host so testers must come through /beta.
-  const host = (await headers()).get("host") ?? "";
-  if (host.startsWith("beta.")) {
-    const session = await getIronSession<BetaSession>(
-      await cookies(),
-      betaSessionOptions
-    );
-    if (!session.code) redirect("/beta");
-  }
-
-  return <Room code={code} />;
+  return <RoomShell code={code} />;
 }

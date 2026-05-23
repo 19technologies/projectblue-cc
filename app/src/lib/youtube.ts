@@ -21,6 +21,8 @@ export interface YTPlayer {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   getCurrentTime(): number;
   getPlayerState(): number;
+  /** 0–100. */
+  setVolume(v: number): void;
   destroy(): void;
 }
 
@@ -32,6 +34,8 @@ interface YTNamespace {
       playerVars?: Record<string, number | string>;
       width?: number | string;
       height?: number | string;
+      /** Optional alternate host — e.g. "https://www.youtube-nocookie.com". */
+      host?: string;
       events?: {
         onReady?: () => void;
         onStateChange?: (e: { data: number }) => void;
@@ -73,5 +77,6 @@ export function loadYouTubeAPI(): Promise<YTNamespace> {
 }
 
 // YouTube player-state numeric codes (PlayerState enum values).
+export const YT_ENDED = 0;
 export const YT_PLAYING = 1;
 export const YT_PAUSED = 2;

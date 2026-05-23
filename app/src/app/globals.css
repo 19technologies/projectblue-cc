@@ -982,3 +982,381 @@ h1, h2, h3, h4, h5, h6, button {
   line-height: 1.55;
   max-width: 38rem;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Room v3 — responsive split (media + queue/people sidebar)
+   ────────────────────────────────────────────────────────────── */
+
+.pb-room-booting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+/* Override .pb-room-main { max-width: 880px } when the desktop grid is on
+   so the sidebar has room to breathe. */
+.pb-room-main.pb-room-grid {
+  max-width: 1320px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.pb-room-stage {
+  min-width: 0; /* let the 16:9 frame shrink in the grid cell */
+}
+
+.pb-room-side {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  padding-right: 0.25rem; /* breathing room for scrollbar */
+}
+
+/* Sidebar panel chrome */
+.pb-side-panel {
+  border: 1px solid var(--pb-hairline);
+  padding: 1.1rem 1.1rem 1.25rem;
+  background: var(--pb-bg);
+}
+.pb-side-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+.pb-side-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pb-text);
+}
+.pb-side-count {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--pb-text-soft);
+}
+.pb-side-empty {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.9rem;
+  color: var(--pb-text-soft);
+  padding: 0.5rem 0 0.25rem;
+}
+.pb-side-action {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pb-text-soft);
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+  transition: color 160ms ease;
+}
+.pb-side-action:hover { color: var(--pb-accent); }
+
+/* Drag-and-drop target — sidebar panel lights up when files are dragged over. */
+.pb-side-queue {
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.pb-side-queue.is-drop-target {
+  border-color: var(--pb-accent);
+  background: color-mix(in srgb, var(--pb-accent) 6%, var(--pb-bg));
+}
+
+/* Queue list */
+.pb-queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.pb-queue-item {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 1px solid var(--pb-hairline);
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-queue-item:last-child { border-bottom: 0; }
+.pb-queue-index {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--pb-text-faint);
+  text-align: right;
+}
+.pb-queue-title {
+  font-size: 0.92rem;
+  color: var(--pb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.pb-queue-actions {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.pb-queue-btn {
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--pb-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.pb-queue-btn:hover {
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+}
+.pb-queue-btn-faint { color: var(--pb-text-soft); }
+
+/* People list */
+.pb-people-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.pb-people-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.92rem;
+  color: var(--pb-text);
+}
+.pb-people-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--pb-accent);
+  flex-shrink: 0;
+}
+.pb-people-name { flex: 1; min-width: 0; }
+.pb-people-tag { color: var(--pb-text-faint); }
+.pb-people-badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--pb-accent);
+  color: var(--pb-accent);
+}
+
+/* Host transport bar — minimal, sits beneath the stage */
+.pb-host-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.35rem;
+  border: 1px solid var(--pb-hairline);
+  border-radius: 999px;
+  background: var(--pb-bg);
+}
+.pb-host-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 1px solid var(--pb-ink);
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.pb-host-btn:hover {
+  background: var(--pb-accent);
+  border-color: var(--pb-accent);
+}
+.pb-host-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pb-host-bar-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pb-text-soft);
+  padding: 0 0.6rem 0 0.25rem;
+}
+
+/* Mobile tab bar (when the desktop grid isn't engaged) */
+.pb-mobile-tabs {
+  margin-top: 2rem;
+}
+.pb-mobile-tabbar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--pb-hairline);
+  margin-bottom: 1rem;
+}
+.pb-mobile-tab {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 0.5rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pb-text-soft);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.pb-mobile-tab.is-active {
+  color: var(--pb-text);
+  border-bottom-color: var(--pb-accent);
+}
+.pb-mobile-tabpanel {
+  padding-bottom: 1rem;
+}
+
+/* Multi-line YouTube entry — textarea stacked above the Add button. */
+.pb-room-form-col {
+  flex-direction: column;
+  align-items: stretch;
+}
+.pb-room-form-col .pb-input,
+.pb-room-form-col .pb-action-btn {
+  width: 100%;
+  min-width: 0;
+}
+.pb-textarea {
+  resize: vertical;
+  min-height: 5rem;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  padding: 0.7rem 0.85rem;
+}
+
+/* Transport row: host bar + per-user volume slider sit on the same line. */
+.pb-transport-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+}
+.pb-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--pb-hairline);
+  border-radius: 999px;
+  background: var(--pb-bg);
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-volume-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  width: 1.1rem;
+  text-align: center;
+}
+.pb-volume-slider {
+  width: 8rem;
+  height: 0.3rem;
+  cursor: pointer;
+  accent-color: var(--pb-accent);
+}
+
+/* Chat panel */
+.pb-side-chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 14rem;
+}
+.pb-chat-scroll {
+  flex: 1;
+  max-height: 18rem;
+  overflow-y: auto;
+  margin-bottom: 0.6rem;
+  padding-right: 0.25rem;
+}
+.pb-chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.pb-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.pb-chat-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.pb-chat-from {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pb-text);
+}
+.pb-chat-msg.is-mine .pb-chat-from { color: var(--pb-accent); }
+.pb-chat-time {
+  font-size: 0.7rem;
+  color: var(--pb-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.pb-chat-text {
+  font-size: 0.92rem;
+  color: var(--pb-text);
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.pb-chat-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.pb-chat-input {
+  flex: 1;
+  margin-bottom: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.92rem;
+}
+.pb-chat-form .pb-action-btn {
+  padding: 0.55rem 0.95rem;
+  font-size: 0.85rem;
+}

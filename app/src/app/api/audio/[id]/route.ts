@@ -11,10 +11,10 @@ export async function GET(
   if (!entry) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  const bytes = Uint8Array.from(atob(entry.base64), (c) => c.charCodeAt(0));
-  return new NextResponse(bytes as BodyInit, {
+  return new NextResponse(entry.bytes as BodyInit, {
     headers: {
       "Content-Type": entry.contentType,
+      "Content-Length": String(entry.bytes.byteLength),
       "Content-Disposition": `inline; filename="${entry.title.replace(/"/g, "")}"`,
       "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
       "Accept-Ranges": "bytes",
