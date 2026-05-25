@@ -66,6 +66,12 @@ export default function AdminDashboardPage() {
             cta="Manage pages"
             href="/admin/pages"
           />
+          <AdminCard
+            title="Email"
+            body="Send beta invite codes and general announcements directly to recipients."
+            cta="Send email"
+            href="/admin/email"
+          />
         </div>
       </main>
     </div>
