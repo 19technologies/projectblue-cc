@@ -1,3 +1,4 @@
+import { FaviconLinks } from "@/components/FaviconLinks";
 import type { Metadata, Viewport } from "next";
 import { Archivo, EB_Garamond, Inter } from "next/font/google";
 import { Toaster } from "sonner";
@@ -53,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
+        <FaviconLinks />
         {/* Boot the saved theme (or prefers-color-scheme) before paint
             so we don't flash the wrong palette. */}
         <script

@@ -6,11 +6,14 @@ import { toast } from "sonner";
 
 type LogoVariant = "light" | "dark" | "favicon-light" | "favicon-dark";
 
-const VARIANTS: { key: LogoVariant; label: string; desc: string }[] = [
-  { key: "light", label: "Light mode (raster)", desc: "PNG, WebP or JPEG — shown on white/light backgrounds." },
-  { key: "dark", label: "Dark mode (raster)", desc: "PNG, WebP or JPEG — shown on dark backgrounds." },
-  { key: "favicon-light", label: "Light mode (favicon)", desc: "Favicon/icon file — preferred over the raster version on light backgrounds." },
-  { key: "favicon-dark", label: "Dark mode (favicon)", desc: "Favicon/icon file — preferred over the raster version on dark backgrounds." },
+const LOGO_VARIANTS: { key: LogoVariant; label: string; desc: string }[] = [
+  { key: "light", label: "Light mode", desc: "Shown in the top-left nav on light backgrounds. PNG, WebP or JPEG." },
+  { key: "dark", label: "Dark mode", desc: "Shown in the top-left nav on dark backgrounds. PNG, WebP or JPEG." },
+];
+
+const FAVICON_VARIANTS: { key: LogoVariant; label: string; desc: string }[] = [
+  { key: "favicon-light", label: "Light mode", desc: "Shown in the browser tab when the OS is in light mode. PNG, ICO or WebP." },
+  { key: "favicon-dark", label: "Dark mode", desc: "Shown in the browser tab when the OS is in dark mode. PNG, ICO or WebP." },
 ];
 
 interface Branding {
@@ -161,19 +164,18 @@ export default function AdminBrandingPage() {
 
             <hr className="pb-welcome-rule" />
 
-            {/* 4 logo variant slots */}
+            {/* Logo variants */}
             <section style={{ marginBottom: "3rem" }}>
               <h2 className="pb-admin-card-title" style={{ marginBottom: "0.5rem" }}>
-                Image logo variants
+                Logo image
               </h2>
               <p className="pb-admin-card-body" style={{ marginBottom: "2rem", maxWidth: "36rem" }}>
-                Upload up to four variants — favicon is preferred over raster; dark/light is
-                chosen automatically based on the visitor's colour scheme. Any combination
-                is valid. PNG, WebP, JPEG or ICO, up to 512&nbsp;KB each.
+                Replaces the text word-mark in the top-left nav. Upload a light and/or dark
+                version — the correct one is chosen automatically. Up to 512&nbsp;KB.
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(18rem, 1fr))", gap: "1.5rem" }}>
-                {VARIANTS.map(({ key, label, desc }) => (
+                {LOGO_VARIANTS.map(({ key, label, desc }) => (
                   <div
                     key={key}
                     style={{
@@ -221,6 +223,97 @@ export default function AdminBrandingPage() {
                         id={`logo-${key}`}
                         type="file"
                         accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                        disabled={busy}
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void onUpload(key, file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {logos[key] && (
+                        <button
+                          type="button"
+                          className="pb-shuffle"
+                          style={{ fontSize: "0.8rem", color: "var(--pb-text-soft)" }}
+                          onClick={() => onRemove(key)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <hr className="pb-welcome-rule" />
+
+            {/* Favicon variants */}
+            <section style={{ marginBottom: "3rem" }}>
+              <h2 className="pb-admin-card-title" style={{ marginBottom: "0.5rem" }}>
+                Favicon
+              </h2>
+              <p className="pb-admin-card-body" style={{ marginBottom: "2rem", maxWidth: "36rem" }}>
+                Appears in the browser tab and bookmarks. Upload a light and/or dark version —
+                the correct one is picked automatically based on the visitor's OS preference.
+                PNG, ICO or WebP, up to 512&nbsp;KB. Square images work best (32×32 or 64×64).
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(18rem, 1fr))", gap: "1.5rem" }}>
+                {FAVICON_VARIANTS.map(({ key, label, desc }) => (
+                  <div
+                    key={key}
+                    style={{
+                      border: "1px solid var(--pb-hairline)",
+                      borderRadius: "8px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: "0.875rem", marginBottom: "0.25rem" }}>{label}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--pb-text-soft)" }}>{desc}</p>
+                    </div>
+
+                    {logos[key] && (
+                      <div
+                        style={{
+                          padding: "0.75rem",
+                          background: key === "favicon-light" ? "#f5f5f5" : "#0A0D1A",
+                          border: "1px solid var(--pb-hairline)",
+                          borderRadius: "6px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/branding/logo/${key}?v=${imgVersions[key] ?? 0}`}
+                          alt={`${label} favicon`}
+                          style={{ width: "2rem", height: "2rem", objectFit: "contain", display: "block" }}
+                        />
+                        <span style={{ fontSize: "0.7rem", color: key === "favicon-light" ? "#555" : "#aaa" }}>
+                          Browser tab preview
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                      <label
+                        htmlFor={`favicon-${key}`}
+                        className="pb-action-btn pb-action-btn-secondary"
+                        style={{ cursor: "pointer", fontSize: "0.8rem", padding: "0.45rem 0.9rem" }}
+                      >
+                        {logos[key] ? "Replace" : "Upload"}
+                      </label>
+                      <input
+                        id={`favicon-${key}`}
+                        type="file"
+                        accept="image/png,image/x-icon,image/webp,image/jpeg"
                         disabled={busy}
                         style={{ display: "none" }}
                         onChange={(e) => {

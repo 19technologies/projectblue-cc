@@ -4,7 +4,7 @@ const TEXT_KEY = "branding";
 
 /** Max logo upload — a word-mark image should be tiny. */
 export const MAX_LOGO_BYTES = 512 * 1024;
-export const ALLOWED_LOGO_TYPES = ["image/png", "image/svg+xml", "image/webp", "image/jpeg"];
+export const ALLOWED_LOGO_TYPES = ["image/png", "image/svg+xml", "image/webp", "image/jpeg", "image/x-icon", "image/vnd.microsoft.icon"];
 
 export type LogoVariant = "light" | "dark" | "favicon-light" | "favicon-dark";
 export const LOGO_VARIANTS: LogoVariant[] = ["light", "dark", "favicon-light", "favicon-dark"];

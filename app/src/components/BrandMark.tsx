@@ -19,17 +19,12 @@ const DEFAULT_BRANDING: Branding = {
   hasImage: false,
 };
 
-function pickVariant(logos: Partial<Record<LogoVariant, boolean>>, dark: boolean): LogoVariant | null {
-  // Prefer favicon variant, fall back to raster, respect current color scheme
+function pickLogoVariant(logos: Partial<Record<LogoVariant, boolean>>, dark: boolean): "light" | "dark" | null {
   if (dark) {
-    if (logos["favicon-dark"]) return "favicon-dark";
     if (logos["dark"]) return "dark";
-    if (logos["favicon-light"]) return "favicon-light";
     if (logos["light"]) return "light";
   } else {
-    if (logos["favicon-light"]) return "favicon-light";
     if (logos["light"]) return "light";
-    if (logos["favicon-dark"]) return "favicon-dark";
     if (logos["dark"]) return "dark";
   }
   return null;
@@ -41,14 +36,14 @@ interface WordMarkProps {
 
 export const WordMark = ({ asLink = false }: WordMarkProps) => {
   const [branding, setBranding] = useState<Branding>(DEFAULT_BRANDING);
-  const [dark, setDark] = useState(true); // site defaults to dark
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    // Detect dark mode from the html class (set by layout.tsx)
-    const update = () => setDark(document.documentElement.classList.contains("dark"));
+    const update = () =>
+      setDark(document.documentElement.getAttribute("data-theme") === "dark");
     update();
     const observer = new MutationObserver(update);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => observer.disconnect();
   }, []);
 
@@ -61,7 +56,7 @@ export const WordMark = ({ asLink = false }: WordMarkProps) => {
     return () => { cancelled = true; };
   }, []);
 
-  const variant = pickVariant(branding.logos, dark);
+  const variant = pickLogoVariant(branding.logos, dark);
 
   const inner = variant ? (
     // eslint-disable-next-line @next/next/no-img-element
