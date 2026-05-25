@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type LogoVariant = "light" | "dark" | "svg-light" | "svg-dark";
+type LogoVariant = "light" | "dark" | "favicon-light" | "favicon-dark";
 
 interface Branding {
   line1: string;
@@ -20,16 +20,16 @@ const DEFAULT_BRANDING: Branding = {
 };
 
 function pickVariant(logos: Partial<Record<LogoVariant, boolean>>, dark: boolean): LogoVariant | null {
-  // Prefer SVG, fall back to raster, respect current color scheme
+  // Prefer favicon variant, fall back to raster, respect current color scheme
   if (dark) {
-    if (logos["svg-dark"]) return "svg-dark";
+    if (logos["favicon-dark"]) return "favicon-dark";
     if (logos["dark"]) return "dark";
-    if (logos["svg-light"]) return "svg-light";
+    if (logos["favicon-light"]) return "favicon-light";
     if (logos["light"]) return "light";
   } else {
-    if (logos["svg-light"]) return "svg-light";
+    if (logos["favicon-light"]) return "favicon-light";
     if (logos["light"]) return "light";
-    if (logos["svg-dark"]) return "svg-dark";
+    if (logos["favicon-dark"]) return "favicon-dark";
     if (logos["dark"]) return "dark";
   }
   return null;

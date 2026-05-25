@@ -6,8 +6,8 @@ const TEXT_KEY = "branding";
 export const MAX_LOGO_BYTES = 512 * 1024;
 export const ALLOWED_LOGO_TYPES = ["image/png", "image/svg+xml", "image/webp", "image/jpeg"];
 
-export type LogoVariant = "light" | "dark" | "svg-light" | "svg-dark";
-export const LOGO_VARIANTS: LogoVariant[] = ["light", "dark", "svg-light", "svg-dark"];
+export type LogoVariant = "light" | "dark" | "favicon-light" | "favicon-dark";
+export const LOGO_VARIANTS: LogoVariant[] = ["light", "dark", "favicon-light", "favicon-dark"];
 
 function logoKey(variant: LogoVariant) {
   return `branding:logo:${variant}`;

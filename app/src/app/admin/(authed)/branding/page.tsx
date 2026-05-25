@@ -4,13 +4,13 @@ import { AdminNav } from "@/components/AdminNav";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-type LogoVariant = "light" | "dark" | "svg-light" | "svg-dark";
+type LogoVariant = "light" | "dark" | "favicon-light" | "favicon-dark";
 
 const VARIANTS: { key: LogoVariant; label: string; desc: string }[] = [
   { key: "light", label: "Light mode (raster)", desc: "PNG, WebP or JPEG — shown on white/light backgrounds." },
   { key: "dark", label: "Dark mode (raster)", desc: "PNG, WebP or JPEG — shown on dark backgrounds." },
-  { key: "svg-light", label: "Light mode (SVG)", desc: "SVG — preferred over the raster version on light backgrounds." },
-  { key: "svg-dark", label: "Dark mode (SVG)", desc: "SVG — preferred over the raster version on dark backgrounds." },
+  { key: "favicon-light", label: "Light mode (favicon)", desc: "Favicon/icon file — preferred over the raster version on light backgrounds." },
+  { key: "favicon-dark", label: "Dark mode (favicon)", desc: "Favicon/icon file — preferred over the raster version on dark backgrounds." },
 ];
 
 interface Branding {
@@ -167,9 +167,9 @@ export default function AdminBrandingPage() {
                 Image logo variants
               </h2>
               <p className="pb-admin-card-body" style={{ marginBottom: "2rem", maxWidth: "36rem" }}>
-                Upload up to four variants — SVG is preferred over raster; dark/light is
+                Upload up to four variants — favicon is preferred over raster; dark/light is
                 chosen automatically based on the visitor's colour scheme. Any combination
-                is valid. PNG, SVG, WebP or JPEG, up to 512&nbsp;KB each.
+                is valid. PNG, WebP, JPEG or ICO, up to 512&nbsp;KB each.
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(18rem, 1fr))", gap: "1.5rem" }}>
