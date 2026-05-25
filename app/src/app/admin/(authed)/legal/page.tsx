@@ -12,6 +12,12 @@ export default async function AdminLegalPage() {
       <header className="pb-welcome-header">
         <WordMark asLink />
         <nav className="pb-welcome-nav" aria-label="Admin">
+          <Link href="/admin" className="pb-nav-link pb-back-btn" aria-label="Back to dashboard">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="pb-back-label">Back</span>
+          </Link>
           <Link href="/admin" className="pb-nav-link">Dashboard</Link>
           <span className="pb-admin-pill">ADMIN</span>
         </nav>

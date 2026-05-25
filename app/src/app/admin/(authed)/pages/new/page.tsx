@@ -1,8 +1,7 @@
 "use client";
 
-import { WordMark } from "@/components/BrandMark";
+import { AdminNav } from "@/components/AdminNav";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { toast } from "sonner";
@@ -46,13 +45,7 @@ function AdminNewPageInner() {
   return (
     <div className="pb-welcome pb-admin-page">
       <div className="pb-topbar" aria-hidden />
-      <header className="pb-welcome-header">
-        <WordMark asLink />
-        <nav className="pb-welcome-nav" aria-label="Admin">
-          <Link href="/admin/pages" className="pb-nav-link">Pages</Link>
-          <span className="pb-admin-pill">ADMIN</span>
-        </nav>
-      </header>
+      <AdminNav page="New page" />
 
       <main id="main" className="pb-welcome-main">
         <p className="pb-legal-updated">

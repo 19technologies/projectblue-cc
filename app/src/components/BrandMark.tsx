@@ -3,51 +3,70 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type LogoVariant = "light" | "dark" | "svg-light" | "svg-dark";
+
 interface Branding {
   line1: string;
   line2: string;
+  logos: Partial<Record<LogoVariant, boolean>>;
   hasImage: boolean;
 }
 
-// Default text — also the first-paint value, so the common (unedited) case
-// shows no flash. Admin edits arrive after /api/branding resolves.
 const DEFAULT_BRANDING: Branding = {
   line1: "PROJECT",
   line2: "BLUE",
+  logos: {},
   hasImage: false,
 };
+
+function pickVariant(logos: Partial<Record<LogoVariant, boolean>>, dark: boolean): LogoVariant | null {
+  // Prefer SVG, fall back to raster, respect current color scheme
+  if (dark) {
+    if (logos["svg-dark"]) return "svg-dark";
+    if (logos["dark"]) return "dark";
+    if (logos["svg-light"]) return "svg-light";
+    if (logos["light"]) return "light";
+  } else {
+    if (logos["svg-light"]) return "svg-light";
+    if (logos["light"]) return "light";
+    if (logos["svg-dark"]) return "svg-dark";
+    if (logos["dark"]) return "dark";
+  }
+  return null;
+}
 
 interface WordMarkProps {
   asLink?: boolean;
 }
 
-/**
- * Mont Blanc-style stacked word-mark in Archivo 800. Branding is
- * admin-editable — text by default, with an optional uploaded image
- * override. Both come from /api/branding.
- */
 export const WordMark = ({ asLink = false }: WordMarkProps) => {
   const [branding, setBranding] = useState<Branding>(DEFAULT_BRANDING);
+  const [dark, setDark] = useState(true); // site defaults to dark
+
+  useEffect(() => {
+    // Detect dark mode from the html class (set by layout.tsx)
+    const update = () => setDark(document.documentElement.classList.contains("dark"));
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/branding")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!cancelled && d) setBranding(d as Branding);
-      })
-      .catch(() => {
-        /* keep defaults */
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((d) => { if (!cancelled && d) setBranding(d as Branding); })
+      .catch(() => { /* keep defaults */ });
+    return () => { cancelled = true; };
   }, []);
 
-  const inner = branding.hasImage ? (
+  const variant = pickVariant(branding.logos, dark);
+
+  const inner = variant ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/api/branding/logo"
+      src={`/api/branding/logo/${variant}`}
       alt="Project Blue"
       className="pb-wordmark-img"
     />
@@ -60,16 +79,10 @@ export const WordMark = ({ asLink = false }: WordMarkProps) => {
 
   if (asLink) {
     return (
-      <Link
-        href="/"
-        className="pb-wordmark"
-        style={{ textDecoration: "none" }}
-        aria-label="Project Blue — home"
-      >
+      <Link href="/" className="pb-wordmark" style={{ textDecoration: "none" }} aria-label="Project Blue — home">
         {inner}
       </Link>
     );
   }
-
   return <div className="pb-wordmark">{inner}</div>;
 };

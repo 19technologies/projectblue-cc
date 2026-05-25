@@ -146,6 +146,21 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-nav-link:hover { color: var(--pb-accent-strong); }
 
+/* Back button in admin nav */
+.pb-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--pb-text-soft);
+}
+.pb-back-btn:hover { color: var(--pb-accent-strong); }
+.pb-back-label { font-size: 0.875rem; }
+
 .pb-nav-link-primary {
   text-decoration: none;
   background: var(--pb-ink);

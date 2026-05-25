@@ -1,5 +1,5 @@
 import { sessionOptions, type AdminSession } from "@/lib/adminAuth";
-import { ALLOWED_LOGO_TYPES, deleteLogo, MAX_LOGO_BYTES, saveLogo } from "@/lib/branding";
+import { ALLOWED_LOGO_TYPES, deleteLogo, LOGO_VARIANTS, MAX_LOGO_BYTES, saveLogo, type LogoVariant } from "@/lib/branding";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -9,9 +9,12 @@ async function requireAdmin() {
   return session.isAdmin ? session : null;
 }
 
-/** Legacy endpoint — operates on the "light" variant for backward compat. */
-export async function POST(req: Request) {
+export async function POST(req: Request, { params }: { params: Promise<{ variant: string }> }) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { variant } = await params;
+  if (!LOGO_VARIANTS.includes(variant as LogoVariant)) {
+    return NextResponse.json({ error: "Unknown variant" }, { status: 400 });
+  }
 
   let body: { contentType?: string; base64?: string };
   try { body = await req.json(); } catch {
@@ -27,12 +30,17 @@ export async function POST(req: Request) {
   if (Math.floor((base64.length * 3) / 4) > MAX_LOGO_BYTES) {
     return NextResponse.json({ error: `Logo too large (max ${Math.round(MAX_LOGO_BYTES / 1024)} KB)` }, { status: 400 });
   }
-  await saveLogo("light", { contentType, base64 });
+
+  await saveLogo(variant as LogoVariant, { contentType, base64 });
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE() {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ variant: string }> }) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  await deleteLogo("light");
+  const { variant } = await params;
+  if (!LOGO_VARIANTS.includes(variant as LogoVariant)) {
+    return NextResponse.json({ error: "Unknown variant" }, { status: 400 });
+  }
+  await deleteLogo(variant as LogoVariant);
   return NextResponse.json({ ok: true });
 }

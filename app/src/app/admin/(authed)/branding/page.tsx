@@ -1,24 +1,33 @@
 "use client";
 
-import { WordMark } from "@/components/BrandMark";
-import Link from "next/link";
+import { AdminNav } from "@/components/AdminNav";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
+type LogoVariant = "light" | "dark" | "svg-light" | "svg-dark";
+
+const VARIANTS: { key: LogoVariant; label: string; desc: string }[] = [
+  { key: "light", label: "Light mode (raster)", desc: "PNG, WebP or JPEG — shown on white/light backgrounds." },
+  { key: "dark", label: "Dark mode (raster)", desc: "PNG, WebP or JPEG — shown on dark backgrounds." },
+  { key: "svg-light", label: "Light mode (SVG)", desc: "SVG — preferred over the raster version on light backgrounds." },
+  { key: "svg-dark", label: "Dark mode (SVG)", desc: "SVG — preferred over the raster version on dark backgrounds." },
+];
 
 interface Branding {
   line1: string;
   line2: string;
+  logos: Partial<Record<LogoVariant, boolean>>;
   hasImage: boolean;
 }
 
 export default function AdminBrandingPage() {
   const [line1, setLine1] = useState("PROJECT");
   const [line2, setLine2] = useState("BLUE");
-  const [hasImage, setHasImage] = useState(false);
+  const [logos, setLogos] = useState<Partial<Record<LogoVariant, boolean>>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  // Cache-buster so the preview <img> refreshes after an upload.
-  const [imgVersion, setImgVersion] = useState(0);
+  const [imgVersions, setImgVersions] = useState<Partial<Record<LogoVariant, number>>>({});
+  const [textDirty, setTextDirty] = useState(false);
 
   const load = async () => {
     try {
@@ -26,14 +35,13 @@ export default function AdminBrandingPage() {
       const b = (await res.json()) as Branding;
       setLine1(b.line1);
       setLine2(b.line2);
-      setHasImage(b.hasImage);
+      setLogos(b.logos ?? {});
     } finally {
       setLoading(false);
+      setTextDirty(false);
     }
   };
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
   const onSaveText = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,30 +52,24 @@ export default function AdminBrandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ line1, line2 }),
       });
-      if (!res.ok) {
-        toast.error("Couldn't save.");
-        return;
-      }
+      if (!res.ok) { toast.error("Couldn't save."); return; }
       toast.success("Word-mark saved.");
+      setTextDirty(false);
     } finally {
       setBusy(false);
     }
   };
 
-  const onUpload = async (file: File) => {
+  const onUpload = async (variant: LogoVariant, file: File) => {
     setBusy(true);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          // strip the "data:...;base64," prefix
-          resolve(result.slice(result.indexOf(",") + 1));
-        };
+        reader.onload = () => resolve((reader.result as string).slice((reader.result as string).indexOf(",") + 1));
         reader.onerror = () => reject(new Error("read failed"));
         reader.readAsDataURL(file);
       });
-      const res = await fetch("/api/admin/branding/logo", {
+      const res = await fetch(`/api/admin/branding/logo/${variant}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contentType: file.type, base64 }),
@@ -78,34 +80,25 @@ export default function AdminBrandingPage() {
         return;
       }
       toast.success("Logo uploaded.");
-      setHasImage(true);
-      setImgVersion((v) => v + 1);
+      setLogos((prev) => ({ ...prev, [variant]: true }));
+      setImgVersions((prev) => ({ ...prev, [variant]: (prev[variant] ?? 0) + 1 }));
     } finally {
       setBusy(false);
     }
   };
 
-  const onRemoveImage = async () => {
-    if (!confirm("Remove the image logo and fall back to the text word-mark?")) return;
-    const res = await fetch("/api/admin/branding/logo", { method: "DELETE" });
-    if (!res.ok) {
-      toast.error("Couldn't remove.");
-      return;
-    }
-    toast.success("Image removed.");
-    setHasImage(false);
+  const onRemove = async (variant: LogoVariant) => {
+    if (!confirm(`Remove the ${variant} logo?`)) return;
+    const res = await fetch(`/api/admin/branding/logo/${variant}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Couldn't remove."); return; }
+    toast.success("Removed.");
+    setLogos((prev) => ({ ...prev, [variant]: false }));
   };
 
   return (
     <div className="pb-welcome pb-admin-page">
       <div className="pb-topbar" aria-hidden />
-      <header className="pb-welcome-header">
-        <WordMark asLink />
-        <nav className="pb-welcome-nav" aria-label="Admin">
-          <Link href="/admin" className="pb-nav-link">Dashboard</Link>
-          <span className="pb-admin-pill">ADMIN</span>
-        </nav>
-      </header>
+      <AdminNav page="Branding" />
 
       <main id="main" className="pb-welcome-main">
         <p className="pb-legal-updated">Admin · Branding</p>
@@ -118,13 +111,13 @@ export default function AdminBrandingPage() {
           <p className="pb-admin-card-body">Loading…</p>
         ) : (
           <>
+            {/* Text word-mark */}
             <section style={{ marginBottom: "3rem" }}>
               <h2 className="pb-admin-card-title" style={{ marginBottom: "1rem" }}>
                 Text word-mark
               </h2>
               <p className="pb-admin-card-body" style={{ marginBottom: "1.5rem", maxWidth: "32rem" }}>
-                Two stacked lines, set in Archivo 800. Used everywhere unless an
-                image logo is uploaded below.
+                Two stacked lines set in Archivo 800. Used when no image logo is uploaded for the current colour scheme.
               </p>
               <form onSubmit={onSaveText} className="pb-form-stack">
                 <label className="pb-action-label" htmlFor="b-line1">Line one</label>
@@ -134,7 +127,7 @@ export default function AdminBrandingPage() {
                   className="pb-input"
                   value={line1}
                   maxLength={24}
-                  onChange={(e) => setLine1(e.target.value)}
+                  onChange={(e) => { setLine1(e.target.value); setTextDirty(true); }}
                   style={{ maxWidth: "20rem" }}
                 />
                 <label className="pb-action-label" htmlFor="b-line2" style={{ marginTop: "1.25rem" }}>
@@ -146,69 +139,109 @@ export default function AdminBrandingPage() {
                   className="pb-input"
                   value={line2}
                   maxLength={24}
-                  onChange={(e) => setLine2(e.target.value)}
+                  onChange={(e) => { setLine2(e.target.value); setTextDirty(true); }}
                   style={{ maxWidth: "20rem" }}
                 />
-                <div className="pb-action-row">
-                  <button type="submit" disabled={busy} className="pb-action-btn">
+                <div className="pb-action-row" style={{ gap: "0.75rem" }}>
+                  <button type="submit" disabled={busy || !textDirty} className="pb-action-btn">
                     {busy ? "Saving…" : "Save word-mark"}
                   </button>
+                  {textDirty && (
+                    <button
+                      type="button"
+                      className="pb-shuffle"
+                      onClick={() => { void load(); }}
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </form>
             </section>
 
             <hr className="pb-welcome-rule" />
 
-            <section>
-              <h2 className="pb-admin-card-title" style={{ marginBottom: "1rem" }}>
-                Image logo {hasImage && <span style={{ color: "var(--pb-text-soft)", fontWeight: 400 }}>· active</span>}
+            {/* 4 logo variant slots */}
+            <section style={{ marginBottom: "3rem" }}>
+              <h2 className="pb-admin-card-title" style={{ marginBottom: "0.5rem" }}>
+                Image logo variants
               </h2>
-              <p className="pb-admin-card-body" style={{ marginBottom: "1.5rem", maxWidth: "32rem" }}>
-                Optional. PNG, SVG, WebP or JPEG, up to 512&nbsp;KB. When set, it
-                replaces the text word-mark across the site.
+              <p className="pb-admin-card-body" style={{ marginBottom: "2rem", maxWidth: "36rem" }}>
+                Upload up to four variants — SVG is preferred over raster; dark/light is
+                chosen automatically based on the visitor's colour scheme. Any combination
+                is valid. PNG, SVG, WebP or JPEG, up to 512&nbsp;KB each.
               </p>
 
-              {hasImage && (
-                <div
-                  style={{
-                    marginBottom: "1.5rem",
-                    padding: "1.25rem",
-                    border: "2px solid var(--pb-hairline)",
-                    display: "inline-block",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/branding/logo?v=${imgVersion}`}
-                    alt="Current logo"
-                    style={{ height: "3rem", display: "block" }}
-                  />
-                </div>
-              )}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(18rem, 1fr))", gap: "1.5rem" }}>
+                {VARIANTS.map(({ key, label, desc }) => (
+                  <div
+                    key={key}
+                    style={{
+                      border: "1px solid var(--pb-hairline)",
+                      borderRadius: "8px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: "0.875rem", marginBottom: "0.25rem" }}>{label}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--pb-text-soft)" }}>{desc}</p>
+                    </div>
 
-              <div className="pb-form-stack">
-                <label className="pb-action-label" htmlFor="b-logo">
-                  {hasImage ? "Replace image" : "Upload image"}
-                </label>
-                <input
-                  id="b-logo"
-                  type="file"
-                  accept="image/png,image/svg+xml,image/webp,image/jpeg"
-                  disabled={busy}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void onUpload(file);
-                    e.target.value = "";
-                  }}
-                  style={{ marginBottom: "1rem", color: "var(--pb-text-soft)" }}
-                />
-                {hasImage && (
-                  <div>
-                    <button type="button" onClick={onRemoveImage} className="pb-shuffle">
-                      Remove image, use text word-mark
-                    </button>
+                    {logos[key] && (
+                      <div
+                        style={{
+                          padding: "0.75rem",
+                          background: key.includes("light") ? "#f5f5f5" : "#0A0D1A",
+                          border: "1px solid var(--pb-hairline)",
+                          borderRadius: "6px",
+                          display: "inline-flex",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/branding/logo/${key}?v=${imgVersions[key] ?? 0}`}
+                          alt={`${label} logo`}
+                          style={{ height: "2.5rem", display: "block" }}
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                      <label
+                        htmlFor={`logo-${key}`}
+                        className="pb-action-btn pb-action-btn-secondary"
+                        style={{ cursor: "pointer", fontSize: "0.8rem", padding: "0.45rem 0.9rem" }}
+                      >
+                        {logos[key] ? "Replace" : "Upload"}
+                      </label>
+                      <input
+                        id={`logo-${key}`}
+                        type="file"
+                        accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                        disabled={busy}
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void onUpload(key, file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {logos[key] && (
+                        <button
+                          type="button"
+                          className="pb-shuffle"
+                          style={{ fontSize: "0.8rem", color: "var(--pb-text-soft)" }}
+                          onClick={() => onRemove(key)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
             </section>
           </>

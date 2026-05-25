@@ -1,7 +1,6 @@
 "use client";
 
-import { WordMark } from "@/components/BrandMark";
-import Link from "next/link";
+import { AdminNav } from "@/components/AdminNav";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -57,13 +56,7 @@ export default function AdminLinksPage() {
   return (
     <div className="pb-welcome pb-admin-page">
       <div className="pb-topbar" aria-hidden />
-      <header className="pb-welcome-header">
-        <WordMark asLink />
-        <nav className="pb-welcome-nav" aria-label="Admin">
-          <Link href="/admin" className="pb-nav-link">Dashboard</Link>
-          <span className="pb-admin-pill">ADMIN</span>
-        </nav>
-      </header>
+      <AdminNav page="Links" />
 
       <main id="main" className="pb-welcome-main">
         <p className="pb-legal-updated">Admin · Links</p>
