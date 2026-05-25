@@ -275,7 +275,9 @@ export const Room = ({ code }: { code: string }) => {
       (window as unknown as { webkitAudioContext?: typeof AudioContext })
         .webkitAudioContext;
     if (!Ctor) return null;
-    const ctx = new Ctor();
+    // Force 44100 Hz — mobile devices (especially Android) sometimes default
+    // to 22050 Hz or 16000 Hz (voice call rate) which causes the "old radio" sound.
+    const ctx = new Ctor({ sampleRate: 44100 });
     const gain = ctx.createGain();
     gain.gain.value = volume;
     gain.connect(ctx.destination);
