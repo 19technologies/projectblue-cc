@@ -43,18 +43,12 @@ export async function POST(req: Request) {
     );
   }
 
-  // Require a known body size. Chunked requests without Content-Length
-  // would force us to buffer up to CF Workers' 100 MB body cap before we
-  // could check the size — wasting CPU and memory on uploads we'd reject.
+  // Use Content-Length as an early-reject hint when present — avoids
+  // buffering obviously-too-large bodies. iOS Safari and some Android
+  // browsers send chunked uploads without it, so we don't require it.
   const declaredRaw = req.headers.get("Content-Length");
   const declared = declaredRaw === null ? NaN : Number(declaredRaw);
-  if (!Number.isFinite(declared) || declared <= 0) {
-    return NextResponse.json(
-      { error: "Content-Length is required." },
-      { status: 411 }
-    );
-  }
-  if (declared > MAX_AUDIO_BYTES) {
+  if (Number.isFinite(declared) && declared > MAX_AUDIO_BYTES) {
     return NextResponse.json(
       { error: `Audio too large (max ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB).` },
       { status: 413 }

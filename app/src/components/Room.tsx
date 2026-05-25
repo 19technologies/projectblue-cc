@@ -47,6 +47,7 @@ type RepeatMode = "off" | "all" | "one";
 interface PlaybackMode {
   shuffle: boolean;
   repeat: RepeatMode;
+  guestCanUpload: boolean;
 }
 type ServerMessage =
   | {
@@ -163,7 +164,7 @@ export const Room = ({ code }: { code: string }) => {
   const [peers, setPeers] = useState<Peer[]>([]);
   const [state, setState] = useState<MediaState | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [mode, setMode] = useState<PlaybackMode>({ shuffle: false, repeat: "off" });
+  const [mode, setMode] = useState<PlaybackMode>({ shuffle: false, repeat: "off", guestCanUpload: false });
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   /** Index of the queue item being dragged (for reorder drag-and-drop). */
@@ -216,6 +217,9 @@ export const Room = ({ code }: { code: string }) => {
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const ctxStartedAtRef = useRef(0); // audioContext.currentTime when current source started
   const offsetAtStartRef = useRef(0); // buffer offset (sec) at that start
+
+  /** Map of audio URL → decoded AudioBuffer for pre-fetched tracks. */
+  const audioBufsRef = useRef<Map<string, AudioBuffer>>(new Map());
 
   const stateRef = useRef<MediaState | null>(null);
   const isHostRef = useRef(false);
@@ -429,10 +433,17 @@ export const Room = ({ code }: { code: string }) => {
       return;
     }
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fetch failed");
-      const bytes = await res.arrayBuffer();
-      const decoded = await ctx.decodeAudioData(bytes);
+      // Use pre-decoded buffer from prefetch cache if available — this lets
+      // scheduleAudio fire within the 250 ms lead window without waiting for
+      // a fresh fetch + decode round-trip.
+      let decoded = audioBufsRef.current.get(url) ?? null;
+      if (!decoded) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("fetch failed");
+        const bytes = await res.arrayBuffer();
+        decoded = await ctx.decodeAudioData(bytes);
+        audioBufsRef.current.set(url, decoded);
+      }
       if (bufferUrlRef.current !== url) return;
       bufferRef.current = decoded;
       setAudioDuration(decoded.duration);
@@ -748,6 +759,34 @@ export const Room = ({ code }: { code: string }) => {
       el.scrollTop = el.scrollHeight;
     }
   }, [chat.length]);
+
+  /* ── Pre-decode next queued audio track ──────────────────────────── */
+  useEffect(() => {
+    const first = queue[0];
+    if (!first || first.media.kind !== "audio") return;
+    const url = first.media.url;
+    if (audioBufsRef.current.has(url)) return;
+    let isCancelled = false;
+    const ctx = ensureAudioCtx();
+    if (!ctx) return;
+    void (async () => {
+      try {
+        const res = await fetch(url);
+        if (isCancelled || !res.ok) return;
+        const bytes = await res.arrayBuffer();
+        if (isCancelled) return;
+        const decoded = await ctx.decodeAudioData(bytes);
+        if (isCancelled) return;
+        audioBufsRef.current.set(url, decoded);
+      } catch {
+        /* prefetch failed silently — no toast, no state update */
+      }
+    })();
+    return () => {
+      isCancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue]);
 
   /* ── Host control handlers ────────────────────────────────────────── */
   const onAudioPlay = () => {
@@ -1103,67 +1142,73 @@ export const Room = ({ code }: { code: string }) => {
         </ol>
       )}
 
-      <div className="pb-room-controls" style={{ marginTop: "1rem" }}>
-        <p className="pb-action-label" style={{ marginBottom: "0.6rem" }}>
-          {isHost ? "Build the playlist" : "Suggest tracks"}
-          {uploadProgress &&
-            ` · uploading ${uploadProgress.done}/${uploadProgress.total}`}
-        </p>
-        <div className="pb-room-actions">
-          <label
-            className="pb-action-btn"
-            style={{ cursor: uploading ? "progress" : "pointer" }}
-          >
-            {uploading ? "Uploading…" : "+ Add tracks"}
-            <input
-              type="file"
-              multiple
-              // Explicit extensions first — `accept="audio/*"` alone makes
-              // Android offer Voice Recorder + Photos/Videos instead of
-              // the Files app, and iOS hides music files entirely.
-              accept=".mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,audio/*"
-              disabled={uploading}
-              onChange={(e) => {
-                const fs = Array.from(e.target.files ?? []);
-                if (fs.length > 0) void onUploadFiles(fs);
-                e.target.value = "";
-              }}
-              style={{ display: "none" }}
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => setShowYtForm((v) => !v)}
-            className="pb-action-btn pb-action-btn-secondary"
-          >
-            {showYtForm ? "Cancel" : "+ YouTube"}
-          </button>
-        </div>
-        {showYtForm && (
-          <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.75rem" }}>
-            <div className="pb-room-form-row pb-room-form-col">
-              <textarea
-                className="pb-input pb-textarea"
-                value={ytUrl}
-                onChange={(e) => setYtUrl(e.target.value)}
-                placeholder={
-                  "Paste videos or playlists (?list=…) — one per line"
-                }
-                rows={3}
-                autoFocus
-                disabled={importingPlaylist}
+      {(isHost || mode.guestCanUpload) ? (
+        <div className="pb-room-controls" style={{ marginTop: "1rem" }}>
+          <p className="pb-action-label" style={{ marginBottom: "0.6rem" }}>
+            {isHost ? "Build the playlist" : "Add tracks"}
+            {uploadProgress &&
+              ` · uploading ${uploadProgress.done}/${uploadProgress.total}`}
+          </p>
+          <div className="pb-room-actions">
+            <label
+              className="pb-action-btn"
+              style={{ cursor: uploading ? "progress" : "pointer" }}
+            >
+              {uploading ? "Uploading…" : "+ Add tracks"}
+              <input
+                type="file"
+                multiple
+                // Explicit extensions first — `accept="audio/*"` alone makes
+                // Android offer Voice Recorder + Photos/Videos instead of
+                // the Files app, and iOS hides music files entirely.
+                accept=".mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,audio/*"
+                disabled={uploading}
+                onChange={(e) => {
+                  const fs = Array.from(e.target.files ?? []);
+                  if (fs.length > 0) void onUploadFiles(fs);
+                  e.target.value = "";
+                }}
+                style={{ display: "none" }}
               />
-              <button type="submit" className="pb-action-btn" disabled={importingPlaylist}>
-                {importingPlaylist ? "Importing…" : "Add"}
-              </button>
-            </div>
-          </form>
-        )}
-        <p className="pb-room-hint" style={{ marginTop: "0.6rem" }}>
-          Pick many tracks at once, drop a folder here, or paste a YouTube
-          playlist URL. 15&nbsp;MB per file.
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowYtForm((v) => !v)}
+              className="pb-action-btn pb-action-btn-secondary"
+            >
+              {showYtForm ? "Cancel" : "+ YouTube"}
+            </button>
+          </div>
+          {showYtForm && (
+            <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.75rem" }}>
+              <div className="pb-room-form-row pb-room-form-col">
+                <textarea
+                  className="pb-input pb-textarea"
+                  value={ytUrl}
+                  onChange={(e) => setYtUrl(e.target.value)}
+                  placeholder={
+                    "Paste videos or playlists (?list=…) — one per line"
+                  }
+                  rows={3}
+                  autoFocus
+                  disabled={importingPlaylist}
+                />
+                <button type="submit" className="pb-action-btn" disabled={importingPlaylist}>
+                  {importingPlaylist ? "Importing…" : "Add"}
+                </button>
+              </div>
+            </form>
+          )}
+          <p className="pb-room-hint" style={{ marginTop: "0.6rem" }}>
+            Pick many tracks at once, drop a folder here, or paste a YouTube
+            playlist URL. 15&nbsp;MB per file.
+          </p>
+        </div>
+      ) : (
+        <p className="pb-admin-card-body" style={{ textAlign: "center", marginTop: "1rem" }}>
+          Only the host can add tracks.
         </p>
-      </div>
+      )}
     </section>
   );
 
@@ -1379,6 +1424,16 @@ export const Room = ({ code }: { code: string }) => {
                   aria-label="Cycle repeat mode"
                 >
                   {mode.repeat === "one" ? "🔂" : "🔁"}
+                </button>
+                <button
+                  type="button"
+                  className={`pb-host-btn pb-host-btn-toggle ${mode.guestCanUpload ? "is-on" : ""}`}
+                  onClick={() => send({ type: "SET_MODE", mode: { guestCanUpload: !mode.guestCanUpload } })}
+                  aria-pressed={mode.guestCanUpload}
+                  title={mode.guestCanUpload ? "Guest uploads on — click to restrict" : "Allow guests to add tracks"}
+                  aria-label="Toggle guest uploads"
+                >
+                  ↑G
                 </button>
                 <span className="pb-host-bar-label">Hosting</span>
               </div>

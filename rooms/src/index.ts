@@ -96,7 +96,7 @@ const SK = {
   mode: "v1:mode",
 } as const;
 
-const DEFAULT_MODE: PlaybackMode = { shuffle: false, repeat: "off" };
+const DEFAULT_MODE: PlaybackMode = { shuffle: false, repeat: "off", guestCanUpload: false };
 
 export class RoomDO extends DurableObject<Env> {
   private sessions = new Set<Session>();
@@ -363,6 +363,9 @@ export class RoomDO extends DurableObject<Env> {
         break;
       }
       case "QUEUE_ADD": {
+        if (!this.isHost(session) && !this.mode.guestCanUpload) {
+          return this.rejectNonHost(session);
+        }
         if (this.queue.length >= MAX_QUEUE) {
           this.send(session, {
             type: "ERROR",
@@ -394,6 +397,9 @@ export class RoomDO extends DurableObject<Env> {
         break;
       }
       case "QUEUE_ADD_MANY": {
+        if (!this.isHost(session) && !this.mode.guestCanUpload) {
+          return this.rejectNonHost(session);
+        }
         const room = Math.max(0, MAX_QUEUE - this.queue.length);
         const accepted = msg.items.slice(0, room);
         if (accepted.length === 0) return;
@@ -468,8 +474,16 @@ export class RoomDO extends DurableObject<Env> {
           shuffle:
             typeof msg.mode.shuffle === "boolean" ? msg.mode.shuffle : this.mode.shuffle,
           repeat: msg.mode.repeat ?? this.mode.repeat,
+          guestCanUpload:
+            typeof msg.mode.guestCanUpload === "boolean"
+              ? msg.mode.guestCanUpload
+              : this.mode.guestCanUpload,
         };
-        if (next.shuffle === this.mode.shuffle && next.repeat === this.mode.repeat) return;
+        if (
+          next.shuffle === this.mode.shuffle &&
+          next.repeat === this.mode.repeat &&
+          next.guestCanUpload === this.mode.guestCanUpload
+        ) return;
         this.mode = next;
         this.broadcast({ type: "MODE", mode: this.mode });
         this.persist(SK.mode, this.mode);
@@ -518,6 +532,16 @@ export class RoomDO extends DurableObject<Env> {
     if (wasHost) {
       this.electHost();
       this.broadcast({ type: "HOST", hostId: this.hostId });
+    }
+    // Last person left — reset room state so the next group starts fresh.
+    // Mode (shuffle/repeat/guestCanUpload) is intentionally kept.
+    if (this.sessions.size === 0) {
+      this.state = null;
+      this.queue = [];
+      this.chat = [];
+      void this.ctx.storage.delete(SK.state);
+      void this.ctx.storage.delete(SK.queue);
+      void this.ctx.storage.delete(SK.chat);
     }
   }
 }

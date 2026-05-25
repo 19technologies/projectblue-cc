@@ -58,6 +58,7 @@ export type RepeatMode = "off" | "all" | "one";
 export interface PlaybackMode {
   shuffle: boolean;
   repeat: RepeatMode;
+  guestCanUpload: boolean;
 }
 
 export type ClientMessage =
@@ -185,6 +186,7 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       if (raw.repeat === "off" || raw.repeat === "all" || raw.repeat === "one") {
         mode.repeat = raw.repeat;
       }
+      if (typeof raw.guestCanUpload === "boolean") mode.guestCanUpload = raw.guestCanUpload;
       return Object.keys(mode).length > 0 ? { type: "SET_MODE", mode } : null;
     }
     case "CHAT":
