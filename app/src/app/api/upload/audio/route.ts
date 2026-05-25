@@ -3,9 +3,6 @@ import {
   MAX_AUDIO_BYTES,
   saveAudio,
 } from "@/lib/audioStorage";
-import { betaSessionOptions, type BetaSession } from "@/lib/sessions";
-import { getIronSession } from "iron-session";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 /**
@@ -15,22 +12,8 @@ import { NextResponse } from "next/server";
  * original filename is URI-encoded in `X-Filename`. No multipart, no
  * JSON, no base64 — those round-trips were spending the Worker's CPU
  * budget on parse work and surfacing as a generic "Upload failed".
- *
- * Gated by the beta cookie — uploads cost storage, so only redeemed
- * testers can do it. A guessed room code alone isn't enough.
  */
 export async function POST(req: Request) {
-  const session = await getIronSession<BetaSession>(
-    await cookies(),
-    betaSessionOptions
-  );
-  if (!session.code) {
-    return NextResponse.json(
-      { error: "Beta access required to upload audio" },
-      { status: 401 }
-    );
-  }
-
   const contentType = (req.headers.get("Content-Type") ?? "").split(";")[0].trim();
   if (!contentType || !ALLOWED_AUDIO_TYPES.includes(contentType)) {
     return NextResponse.json(
