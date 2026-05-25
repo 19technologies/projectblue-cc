@@ -1158,10 +1158,10 @@ export const Room = ({ code }: { code: string }) => {
               <input
                 type="file"
                 multiple
-                // Explicit extensions first — `accept="audio/*"` alone makes
-                // Android offer Voice Recorder + Photos/Videos instead of
-                // the Files app, and iOS hides music files entirely.
-                accept=".mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,audio/*"
+                // Extensions only — NO audio/* wildcard. On Android,
+                // audio/* triggers the full media chooser (Camera, Voice
+                // Recorder, Photos). Explicit extensions open Files directly.
+                accept=".mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,.wma,.aiff,.aif"
                 disabled={uploading}
                 onChange={(e) => {
                   const fs = Array.from(e.target.files ?? []);
