@@ -395,10 +395,8 @@ h1, h2, h3, h4, h5, h6, button {
   padding: 0.95rem 1.5rem;
   cursor: pointer;
   align-self: flex-start;
-  box-shadow: 0 2px 0 var(--pb-ink-shadow);
   transition: background 200ms cubic-bezier(.2,.7,.3,1),
               border-color 200ms cubic-bezier(.2,.7,.3,1),
-              transform 200ms cubic-bezier(.2,.7,.3,1),
               color 200ms cubic-bezier(.2,.7,.3,1);
 }
 .pb-action-btn:hover {
@@ -408,7 +406,6 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-action-btn:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 0 var(--pb-ink-shadow);
 }
 .pb-action-btn:disabled {
   background: var(--pb-text-faint);
@@ -499,7 +496,10 @@ h1, h2, h3, h4, h5, h6, button {
   color: var(--pb-text-soft);
 }
 
-.pb-room-main { max-width: 880px; }
+.pb-room-main {
+  max-width: 760px;
+  /* No grid — single centered column on all screen sizes */
+}
 
 .pb-yt-frame {
   position: relative;
@@ -580,10 +580,18 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-audio-seek {
   flex: 1;
-  min-width: 4rem; /* prevents seek bar from collapsing to nothing */
-  height: 0.35rem;
+  min-width: 4rem;
+  height: 0.5rem;
   cursor: pointer;
   accent-color: var(--pb-accent);
+}
+.pb-audio-seek::-webkit-slider-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.pb-audio-seek::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* Empty state */
@@ -1013,29 +1021,8 @@ h1, h2, h3, h4, h5, h6, button {
   min-height: 50vh;
 }
 
-/* Override .pb-room-main { max-width: 880px } when the desktop grid is on
-   so the sidebar has room to breathe. */
-.pb-room-main.pb-room-grid {
-  max-width: 1320px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 24rem;
-  gap: 2rem;
-  align-items: start;
-}
-
 .pb-room-stage {
-  min-width: 0; /* let the 16:9 frame shrink in the grid cell */
-}
-
-.pb-room-side {
-  position: sticky;
-  top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  max-height: calc(100vh - 3rem);
-  overflow-y: auto;
-  padding-right: 0.25rem; /* breathing room for scrollbar */
+  min-width: 0;
 }
 
 /* Sidebar panel chrome */
@@ -1094,39 +1081,86 @@ h1, h2, h3, h4, h5, h6, button {
   background: color-mix(in srgb, var(--pb-accent) 6%, var(--pb-bg));
 }
 
-/* Now-playing row above the queue */
+/* ── Now Playing card (Apple Music-style) ──────────────────────────────── */
 .pb-now-playing {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: baseline;
-  gap: 0.65rem;
-  padding: 0.55rem 0.25rem 0.7rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid var(--pb-hairline);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0;
+  background: color-mix(in srgb, var(--pb-accent) 10%, var(--pb-bg));
+  border: 1px solid color-mix(in srgb, var(--pb-accent) 22%, transparent);
   font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 .pb-now-label {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--pb-accent);
+  display: block;
+  margin-bottom: 0.2rem;
 }
 .pb-now-title {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--pb-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  flex: 1;
 }
+
+/* Animated playing bars (3 bars, staggered) */
+.pb-playing-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 0.9rem;
+  width: 0.85rem;
+  flex-shrink: 0;
+}
+.pb-playing-bars span {
+  flex: 1;
+  background: var(--pb-accent);
+  border-radius: 1px;
+  height: 30%;
+  animation: pb-bar 0.85s ease-in-out infinite alternate;
+}
+.pb-playing-bars span:nth-child(2) { animation-duration: 0.65s; animation-delay: 0.1s; }
+.pb-playing-bars span:nth-child(3) { animation-duration: 0.75s; animation-delay: 0.22s; }
+@keyframes pb-bar {
+  from { height: 25%; }
+  to   { height: 100%; }
+}
+.pb-playing-bars.is-paused span {
+  animation-play-state: paused;
+  height: 50%;
+}
+
+/* "UP NEXT" section divider */
+.pb-up-next-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pb-text-soft);
+  padding: 0.85rem 0 0.4rem;
+  border-top: 1px solid var(--pb-hairline);
+  margin-top: 0.25rem;
+}
+
+/* Legacy dot — kept for reduced-motion fallback */
 .pb-now-dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
   background: var(--pb-text-faint);
   align-self: center;
+  display: none; /* replaced by animated bars */
 }
 .pb-now-dot.is-playing {
   background: var(--pb-accent);
@@ -1148,12 +1182,13 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-queue-item {
   display: grid;
-  grid-template-columns: 1.4rem 1fr auto;
+  grid-template-columns: 2.5rem 1fr auto;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.55rem 0.25rem;
+  padding: 0.5rem 0.25rem;
   border-bottom: 1px solid var(--pb-hairline);
   font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  min-height: 3rem;
 }
 .pb-queue-item:last-child { border-bottom: 0; }
 .pb-queue-item[draggable="true"] { cursor: grab; }
@@ -1161,46 +1196,77 @@ h1, h2, h3, h4, h5, h6, button {
   opacity: 0.45;
   background: color-mix(in srgb, var(--pb-accent) 8%, transparent);
 }
-.pb-queue-handle {
-  font-size: 0.85rem;
-  color: var(--pb-text-faint);
-  letter-spacing: -0.1em;
-  text-align: right;
-  user-select: none;
-  cursor: grab;
+
+/* Square track thumbnail — solid color block with icon */
+.pb-track-thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 2px;
 }
-.pb-queue-index {
-  font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
-  color: var(--pb-text-faint);
-  text-align: right;
+.pb-track-thumb-yt {
+  background: var(--pb-accent);
+}
+.pb-yt-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--pb-on-ink);
+}
+
+/* Track info: title + badge stacked */
+.pb-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 .pb-queue-title {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: var(--pb-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
 }
+.pb-track-badge {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pb-text-faint);
+}
+.pb-track-badge-yt {
+  color: var(--pb-accent);
+}
+
 .pb-queue-actions {
   display: inline-flex;
   gap: 0.25rem;
 }
 .pb-queue-btn {
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 1px solid transparent;
   background: transparent;
   color: var(--pb-text);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  flex-shrink: 0;
 }
 .pb-queue-btn:hover {
   border-color: var(--pb-accent);
@@ -1255,19 +1321,20 @@ h1, h2, h3, h4, h5, h6, button {
   background: var(--pb-bg);
 }
 .pb-host-btn {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 50%;
   border: 1px solid var(--pb-ink);
   background: var(--pb-ink);
   color: var(--pb-on-ink);
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: background 160ms ease, border-color 160ms ease;
+  flex-shrink: 0;
 }
 .pb-host-btn:hover {
   background: var(--pb-accent);
@@ -1319,7 +1386,7 @@ h1, h2, h3, h4, h5, h6, button {
   background: transparent;
   border: 0;
   border-bottom: 2px solid transparent;
-  padding: 0.75rem 0.5rem;
+  padding: 1rem 0.5rem;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 700;
   font-size: 0.78rem;
@@ -1328,6 +1395,7 @@ h1, h2, h3, h4, h5, h6, button {
   color: var(--pb-text-soft);
   cursor: pointer;
   transition: color 160ms ease, border-color 160ms ease;
+  min-height: 2.75rem;
 }
 .pb-mobile-tab.is-active {
   color: var(--pb-text);
@@ -1356,12 +1424,11 @@ h1, h2, h3, h4, h5, h6, button {
   padding: 0.7rem 0.85rem;
 }
 
-/* Transport row: host bar + per-user volume slider sit on the same line. */
+/* Transport row: flex column — primary pills, then secondary+volume row. */
 .pb-transport-row {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.65rem;
   margin: 0 0 1.25rem;
 }
 .pb-volume {
@@ -1382,9 +1449,17 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-volume-slider {
   width: 8rem;
-  height: 0.3rem;
+  height: 0.5rem;
   cursor: pointer;
   accent-color: var(--pb-accent);
+}
+.pb-volume-slider::-webkit-slider-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.pb-volume-slider::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* Chat panel */
@@ -1451,4 +1526,483 @@ h1, h2, h3, h4, h5, h6, button {
 .pb-chat-form .pb-action-btn {
   padding: 0.55rem 0.95rem;
   font-size: 0.85rem;
+}
+
+/* ── Mobile layout (< 640px) ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Audio player: tighter padding, slightly larger title */
+  .pb-audio-frame {
+    padding: 1rem;
+  }
+  .pb-audio-title {
+    font-size: 1rem;
+  }
+
+  .pb-host-bar {
+    justify-content: center;
+  }
+
+  /* Volume: full width so the slider has room to breathe */
+  .pb-volume {
+    justify-content: center;
+  }
+  .pb-volume-slider {
+    flex: 1;
+    width: auto;
+    max-width: 14rem;
+  }
+
+  /* Hide hosting label on narrow screens — saves space in secondary row */
+  .pb-secondary-controls .pb-host-bar-label {
+    display: none;
+  }
+
+  /* Room hint: slightly smaller so it doesn't crowd on narrow phones */
+  .pb-room-hint {
+    font-size: 0.88rem;
+  }
+}
+
+/* ── Tablet layout (768px – 1023px) ───────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Sidebar panels: compact padding to preserve space */
+  .pb-side-panel {
+    padding: 0.9rem 0.9rem 1rem;
+  }
+
+  /* Audio frame: slightly more compact */
+  .pb-audio-frame {
+    padding: 1.25rem;
+  }
+
+  /* Room stage: reduce bottom margin on frames so sidebar is more visible */
+  .pb-yt-frame,
+  .pb-audio-frame {
+    margin-bottom: 1.25rem;
+  }
+
+  /* Transport row: tighter on tablet */
+  .pb-transport-row {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* ── Desktop layout (≥ 1024px) ────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .pb-side-panel {
+    padding: 1.25rem 1.25rem 1.5rem;
+  }
+  .pb-audio-title {
+    font-size: 1.2rem;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Now Playing stage — solid ink square (album-art proportions).
+   No gradient, no decorative note, no scrim overlay.
+   ────────────────────────────────────────────────────────────── */
+.pb-now-playing-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--pb-ink);
+  border: 2px solid var(--pb-text);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Playing bars — centered inside the solid card */
+.pb-np-bars {
+  transform: scale(2.5);
+}
+
+/* Track title below the card */
+.pb-np-title-below {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.9rem, 2.5vw, 1.15rem);
+  color: var(--pb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.75rem;
+}
+
+
+.pb-np-loading {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  font-style: italic;
+  position: absolute;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Primary pill controls — Play/Pause + Skip.
+   Inspired by Apple Music's large rounded-rect CTAs.
+   ────────────────────────────────────────────────────────────── */
+.pb-primary-controls {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.pb-play-pill {
+  flex: 2;
+  min-width: 7rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  border: 2px solid var(--pb-ink);
+  cursor: pointer;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.pb-play-pill:hover {
+  background: var(--pb-accent);
+  border-color: var(--pb-accent);
+}
+
+.pb-skip-pill {
+  flex: 1;
+  min-width: 5rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pb-text);
+  border: 2px solid var(--pb-hairline);
+  cursor: pointer;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.pb-skip-pill:hover {
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+}
+.pb-skip-pill:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+/* Row holding secondary toggles (shuffle/repeat) + volume, side-by-side */
+.pb-secondary-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+/* Volume pushed to the right */
+.pb-secondary-volume-row > .pb-volume {
+  margin-left: auto;
+}
+
+/* Pill container for shuffle/repeat/label — tighter than pb-host-bar */
+.pb-secondary-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.35rem;
+  border: 1px solid var(--pb-hairline);
+  border-radius: 999px;
+  background: var(--pb-bg);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   People chips — compact horizontal pill row in the session tab.
+   Replaces the vertical people panel.
+   ────────────────────────────────────────────────────────────── */
+.pb-people-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+.pb-people-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.75rem;
+  border: 1px solid var(--pb-hairline);
+  border-radius: 999px;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.82rem;
+  color: var(--pb-text);
+}
+.pb-people-chip.is-host {
+  border-color: var(--pb-accent);
+}
+.pb-chip-tag {
+  font-size: 0.65rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pb-text-faint);
+}
+.pb-people-chip.is-host .pb-chip-tag { color: var(--pb-accent); }
+
+/* Plus circle button — media panel header */
+.pb-plus-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--pb-ink);
+  background: transparent;
+  color: var(--pb-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.pb-plus-btn:hover,
+.pb-plus-btn.is-open {
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+}
+.pb-plus-btn.is-open {
+  transform: rotate(45deg);
+}
+
+/* Inline add panel — below queue header */
+.pb-add-panel {
+  padding: 0.75rem 0 0.65rem;
+  border-bottom: 1px solid var(--pb-hairline);
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Guest upload toggle — lives in the sidebar, not in transport.
+   ────────────────────────────────────────────────────────────── */
+.pb-guest-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0 0.15rem;
+  border-top: 1px solid var(--pb-hairline);
+  margin-top: 0.5rem;
+}
+.pb-guest-toggle-label {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.82rem;
+  color: var(--pb-text-soft);
+}
+.pb-guest-toggle-btn {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.65rem;
+  border: 1px solid var(--pb-hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pb-text-soft);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+}
+.pb-guest-toggle-btn.is-on {
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+}
+.pb-guest-toggle-btn:hover {
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Sticky mini-player — mobile only, always visible.
+   Stays above the tab bar so the user never loses track context
+   regardless of which panel tab is open.
+   ────────────────────────────────────────────────────────────── */
+.pb-mini-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: color-mix(in srgb, var(--pb-bg) 84%, var(--pb-ink));
+  border-top: 1px solid var(--pb-hairline);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+}
+.pb-mini-bars {
+  flex-shrink: 0;
+}
+.pb-mini-info {
+  flex: 1;
+  min-width: 0;
+}
+.pb-mini-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--pb-text);
+  line-height: 1.25;
+}
+.pb-mini-sub {
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  color: var(--pb-text-soft);
+  margin-top: 0.1rem;
+}
+.pb-mini-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--pb-ink);
+  color: var(--pb-on-ink);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 160ms ease;
+}
+.pb-mini-btn:hover { background: var(--pb-accent); }
+
+/* Lift the page content so the mini-player doesn't cover it */
+.pb-has-mini .pb-welcome-main {
+  padding-bottom: 4.75rem;
+}
+
+/* Mobile pill sizing */
+@media (max-width: 640px) {
+  .pb-play-pill { height: 2.65rem; font-size: 0.9rem; }
+  .pb-skip-pill { height: 2.65rem; font-size: 0.85rem; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Unified room tab bar.
+   Desktop (≥ 768px): horizontal strip below header, text labels,
+     accent underline on active, hairline border-bottom.
+   Mobile (< 768px): fixed bottom, backdrop-blur, icon + label.
+   ────────────────────────────────────────────────────────────── */
+.pb-room-tabbar {
+  display: flex;
+  border-bottom: 1px solid var(--pb-hairline);
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.pb-room-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--pb-text-soft);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+}
+.pb-room-tab.is-active {
+  color: var(--pb-accent);
+  border-bottom-color: var(--pb-accent);
+}
+.pb-room-tab:hover:not(.is-active) {
+  color: var(--pb-text);
+}
+
+/* Icons hidden on desktop — text labels only */
+.pb-room-tab-icon { display: none; }
+
+@media (max-width: 767px) {
+  /* Fixed bottom bar on mobile */
+  .pb-room-tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 210;
+    border-bottom: 0;
+    border-top: 1px solid var(--pb-hairline);
+    background: color-mix(in srgb, var(--pb-bg) 88%, var(--pb-ink));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    max-width: none;
+    margin: 0;
+  }
+  .pb-room-tab {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.55rem 0.25rem;
+    gap: 0.2rem;
+    border-bottom: 0;
+    margin-bottom: 0;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-height: 3rem;
+  }
+  .pb-room-tab.is-active {
+    border-bottom: 0;
+    color: var(--pb-accent);
+  }
+  /* Show icons on mobile */
+  .pb-room-tab-icon { display: block; }
+
+  /* Room main: reduce top padding, ensure bottom clears tab bar */
+  .pb-welcome-main.pb-room-main {
+    padding-top: 1.25rem;
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Chat panel fills available mobile height */
+  .pb-side-chat { min-height: calc(100dvh - 14rem); }
+  .pb-chat-scroll { max-height: calc(100dvh - 18rem); }
+}
+
+/* Mini-player sits above the bottom tab bar on mobile */
+.pb-mini-player {
+  bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Content lifts above both mini-player and tab bar */
+.pb-has-mini .pb-welcome-main {
+  padding-bottom: calc(3.5rem + 3.75rem + env(safe-area-inset-bottom, 0px));
 }

@@ -10,6 +10,24 @@ import {
   YT_PLAYING,
   type YTPlayer,
 } from "@/lib/youtube";
+import {
+  GripVertical,
+  Headphones,
+  ListMusic,
+  MessageCircle,
+  Music2,
+  Pause,
+  Play,
+  Plus,
+  Repeat,
+  Repeat1,
+  Shuffle,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+  X as XIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -91,8 +109,8 @@ const formatChatTime = (ts: number): string => {
   return `${hh}:${mm}`;
 };
 
-/** Desktop breakpoint — at/above this width we split into media + sidebar. */
-const DESKTOP_MIN_PX = 900;
+/** Tablet breakpoint — at/above this width we split into media + sidebar. */
+const DESKTOP_MIN_PX = 768;
 
 const useIsDesktop = (): boolean => {
   // Read matchMedia synchronously on the first client render so desktop
@@ -182,17 +200,10 @@ export const Room = ({ code }: { code: string }) => {
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioPosition, setAudioPosition] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"queue" | "chat" | "people">("queue");
+  const [activeTab, setActiveTab] = useState<"session" | "media" | "chat">("session");
+  const [showAddPanel, setShowAddPanel] = useState(false);
   // Lazy init so we don't trigger a second render just to read localStorage.
-  const [volume, setVolume] = useState<number>(() => {
-    if (typeof window === "undefined") return 1;
-    try {
-      const v = Number(localStorage.getItem("pb-volume"));
-      return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 1;
-    } catch {
-      return 1;
-    }
-  });
+  const [volume, setVolume] = useState<number>(1);
   const [name] = useState<string>(() => {
     if (typeof window === "undefined") return generateName();
     try {
@@ -209,17 +220,10 @@ export const Room = ({ code }: { code: string }) => {
   const ytRef = useRef<YTPlayer | null>(null);
   const ytReady = useRef(false);
 
-  /* Web Audio — sample-accurate scheduled playback */
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
-  const bufferRef = useRef<AudioBuffer | null>(null);
-  const bufferUrlRef = useRef<string | null>(null);
-  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const ctxStartedAtRef = useRef(0); // audioContext.currentTime when current source started
-  const offsetAtStartRef = useRef(0); // buffer offset (sec) at that start
-
-  /** Map of audio URL → decoded AudioBuffer for pre-fetched tracks. */
-  const audioBufsRef = useRef<Map<string, AudioBuffer>>(new Map());
+  // Native <audio> element — no Web Audio graph so there's zero resampling
+  // or processing overhead. Volume is controlled via el.volume directly.
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
 
   const stateRef = useRef<MediaState | null>(null);
   const isHostRef = useRef(false);
@@ -244,10 +248,7 @@ export const Room = ({ code }: { code: string }) => {
   /** Counter for dragenter/dragleave — flat equality check (currentTarget
    *  === target) flickers as you cross child boundaries. */
   const dragCounterRef = useRef(0);
-  /** Debounce timer for volume → localStorage. */
-  const volumeWriteTimerRef = useRef<number | null>(null);
-  /** Mirror of volume for unmount-time flush (closure would capture stale value). */
-  const volumeRef = useRef<number>(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* Persist the first-ever generated name so reconnects keep the same handle. */
   useEffect(() => {
@@ -271,31 +272,29 @@ export const Room = ({ code }: { code: string }) => {
 
   /* ── Web Audio plumbing ───────────────────────────────────────────── */
 
-  const ensureAudioCtx = (): AudioContext | null => {
-    if (audioCtxRef.current) return audioCtxRef.current;
+  const ensureAudioEl = (): HTMLAudioElement | null => {
+    if (audioElRef.current) return audioElRef.current;
     if (typeof window === "undefined") return null;
-    const Ctor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!Ctor) return null;
-    // Force 44100 Hz — mobile devices (especially Android) sometimes default
-    // to 22050 Hz or 16000 Hz (voice call rate) which causes the "old radio" sound.
-    const ctx = new Ctor({ sampleRate: 44100 });
-    const gain = ctx.createGain();
-    gain.gain.value = volume;
-    gain.connect(ctx.destination);
-    audioCtxRef.current = ctx;
-    gainRef.current = gain;
-    return ctx;
+    const el = new Audio();
+    el.volume = volume;
+    audioElRef.current = el;
+    return el;
   };
 
-  /* Apply volume to both pipes whenever the slider moves. Local-only —
-     each user has their own gain; nothing syncs to the room. The
-     localStorage write is debounced so dragging the slider doesn't thrash
-     storage (mobile Safari serialises every write to disk). */
+  const stopAudio = () => {
+    const el = audioElRef.current;
+    if (el && !el.paused) {
+      el.pause();
+      el.onended = null;
+    }
+  };
+
+  const audioPlayheadNow = (): number =>
+    audioElRef.current?.currentTime ?? stateRef.current?.positionSec ?? 0;
+
   useEffect(() => {
-    if (gainRef.current) gainRef.current.gain.value = volume;
+    const el = audioElRef.current;
+    if (el) el.volume = volume;
     const yt = ytRef.current;
     if (yt && ytReady.current) {
       try {
@@ -304,156 +303,20 @@ export const Room = ({ code }: { code: string }) => {
         /* player may not be ready */
       }
     }
-    volumeRef.current = volume;
-    if (volumeWriteTimerRef.current !== null) {
-      window.clearTimeout(volumeWriteTimerRef.current);
-    }
-    volumeWriteTimerRef.current = window.setTimeout(() => {
-      volumeWriteTimerRef.current = null;
-      try {
-        localStorage.setItem("pb-volume", String(volume));
-      } catch {
-        /* storage disabled */
-      }
-    }, 250);
   }, [volume]);
-  // Flush the pending debounce on unmount so the last value isn't lost,
-  // and abort any in-flight uploads so we don't setState post-unmount.
   useEffect(() => {
     return () => {
-      if (volumeWriteTimerRef.current !== null) {
-        window.clearTimeout(volumeWriteTimerRef.current);
-        try {
-          localStorage.setItem("pb-volume", String(volumeRef.current));
-        } catch {
-          /* storage disabled */
-        }
-      }
       uploadAbortRef.current?.abort();
+      const el = audioElRef.current;
+      if (el) {
+        el.pause();
+        el.onended = null;
+        el.onloadedmetadata = null;
+        el.src = "";
+      }
     };
   }, []);
 
-  const stopSource = () => {
-    const src = sourceRef.current;
-    if (src) {
-      try {
-        src.onended = null;
-        src.stop();
-      } catch {
-        /* already stopped */
-      }
-      try {
-        src.disconnect();
-      } catch {
-        /* already disconnected */
-      }
-      sourceRef.current = null;
-    }
-  };
-
-  /** Live playhead while the buffer source is running. */
-  const audioPlayheadNow = (): number => {
-    const ctx = audioCtxRef.current;
-    const src = sourceRef.current;
-    const buf = bufferRef.current;
-    if (!ctx || !src || !buf) return stateRef.current?.positionSec ?? 0;
-    return Math.min(
-      buf.duration,
-      Math.max(0, offsetAtStartRef.current + (ctx.currentTime - ctxStartedAtRef.current))
-    );
-  };
-
-  /** Schedule the decoded buffer to match `s`. */
-  const scheduleAudio = (s: MediaState) => {
-    if (s.media.kind !== "audio") return;
-    const ctx = audioCtxRef.current;
-    const gain = gainRef.current;
-    const buf = bufferRef.current;
-    if (!ctx || !gain || !buf) return;
-    stopSource();
-    if (!s.playing) return;
-
-    const localStartMs = s.anchorServerMs - clockOffsetRef.current;
-    const delayMs = localStartMs - Date.now();
-
-    let when: number;
-    let offset: number;
-    if (delayMs >= 0) {
-      when = ctx.currentTime + delayMs / 1000;
-      offset = s.positionSec;
-    } else {
-      when = ctx.currentTime;
-      offset = s.positionSec + -delayMs / 1000;
-    }
-    if (offset >= buf.duration) return;
-
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(gain);
-    // Auto-advance: when audio ends and we're the host, pull the next item.
-    src.onended = () => {
-      if (!isHostRef.current) return;
-      const cur = stateRef.current;
-      if (!cur) return;
-      const key = mediaKey(cur.media);
-      if (endHandledForKey.current === key) return;
-      endHandledForKey.current = key;
-      send({ type: "QUEUE_NEXT" });
-    };
-    try {
-      src.start(when, Math.max(0, offset));
-    } catch {
-      setAutoplayBlocked(true);
-      return;
-    }
-    sourceRef.current = src;
-    ctxStartedAtRef.current = when;
-    offsetAtStartRef.current = offset;
-
-    if (ctx.state === "suspended") {
-      setAutoplayBlocked(true);
-      void ctx.resume().then(() => {
-        if (ctx.state === "running") setAutoplayBlocked(false);
-      });
-    } else {
-      setAutoplayBlocked(false);
-    }
-  };
-
-  const decodeAudio = async (url: string) => {
-    setAudioReady(false);
-    setAudioDuration(0);
-    setAudioPosition(0);
-    bufferRef.current = null;
-    bufferUrlRef.current = url;
-    stopSource();
-    const ctx = ensureAudioCtx();
-    if (!ctx) {
-      toast.error("Web Audio isn't supported in this browser.");
-      return;
-    }
-    try {
-      // Use pre-decoded buffer from prefetch cache if available — this lets
-      // scheduleAudio fire within the 250 ms lead window without waiting for
-      // a fresh fetch + decode round-trip.
-      let decoded = audioBufsRef.current.get(url) ?? null;
-      if (!decoded) {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("fetch failed");
-        const bytes = await res.arrayBuffer();
-        decoded = await ctx.decodeAudioData(bytes);
-        audioBufsRef.current.set(url, decoded);
-      }
-      if (bufferUrlRef.current !== url) return;
-      bufferRef.current = decoded;
-      setAudioDuration(decoded.duration);
-      setAudioReady(true);
-      const s = stateRef.current;
-      if (s && s.media.kind === "audio" && s.media.url === url) scheduleAudio(s);
-    } catch {
-      toast.error("Couldn't load that audio file.");
-    }
-  };
 
   /* ── Apply authoritative state ────────────────────────────────────── */
 
@@ -467,9 +330,7 @@ export const Room = ({ code }: { code: string }) => {
 
     applyingRemote.current = true;
     if (s.media.kind === "youtube") {
-      stopSource();
-      bufferRef.current = null;
-      bufferUrlRef.current = null;
+      stopAudio();
       setAudioReady(false);
 
       const target = Math.max(0, targetPosition(s));
@@ -491,10 +352,90 @@ export const Room = ({ code }: { code: string }) => {
         if (!s.playing && player.getPlayerState() === YT_PLAYING) player.pauseVideo();
       }
     } else {
-      if (mediaChanged || bufferUrlRef.current !== s.media.url) {
-        void decodeAudio(s.media.url);
-      } else {
-        scheduleAudio(s);
+      // Streaming audio via <audio> element — starts immediately without
+      // downloading the whole file first.
+      const url = s.media.url;
+      const el = ensureAudioEl();
+      if (el) {
+        const isNewTrack = mediaChanged || currentAudioUrlRef.current !== url;
+
+        const attachEndedHandler = () => {
+          el.onended = () => {
+            if (!isHostRef.current) return;
+            const cur = stateRef.current;
+            if (!cur) return;
+            const key = mediaKey(cur.media);
+            if (endHandledForKey.current === key) return;
+            endHandledForKey.current = key;
+            send({ type: "QUEUE_NEXT" });
+          };
+        };
+
+        if (isNewTrack) {
+          stopAudio();
+          setAudioReady(false);
+          setAudioDuration(0);
+          setAudioPosition(0);
+          // Clear any pending canplay handler from the previous track so it
+          // doesn't fire after we've already switched to a new URL.
+          el.oncanplay = null;
+          el.src = url;
+          el.volume = volume;
+          currentAudioUrlRef.current = url;
+        }
+
+        if (s.playing) {
+          // Re-derive the playhead at the moment we actually start — loading
+          // takes time on mobile, so the correct position must be calculated
+          // inside startSynced(), not here at applyState call time.
+          const startSynced = () => {
+            if (currentAudioUrlRef.current !== url) return;
+            const cur = stateRef.current;
+            if (!cur || cur.media.kind !== "audio" || !cur.playing) return;
+            const localStartMs = cur.anchorServerMs - clockOffsetRef.current;
+            const delayMs = localStartMs - Date.now();
+            const seekTo = Math.max(0, cur.positionSec + Math.max(0, -delayMs / 1000));
+            el.currentTime = seekTo;
+            attachEndedHandler();
+            void el.play().catch(() => setAutoplayBlocked(true));
+            setAutoplayBlocked(false);
+          };
+
+          // HAVE_FUTURE_DATA (3) or HAVE_ENOUGH_DATA (4): data is buffered,
+          // seek and play immediately. Otherwise wait — on Android, setting
+          // currentTime before any data is buffered is silently ignored and
+          // playback starts from position 0 instead of the intended seek target.
+          if (el.readyState >= 3) {
+            startSynced();
+          } else {
+            el.oncanplay = () => {
+              el.oncanplay = null;
+              startSynced();
+            };
+          }
+          el.onloadedmetadata = () => {
+            if (currentAudioUrlRef.current !== url) return;
+            setAudioDuration(el.duration);
+            setAudioReady(true);
+          };
+        } else {
+          // Paused: cancel any pending canplay/play, seek to the correct position.
+          el.oncanplay = null;
+          if (!isNewTrack) {
+            el.pause();
+            el.currentTime = s.positionSec;
+            el.onloadedmetadata = null;
+          } else {
+            // New track in paused state — defer seek until metadata is loaded.
+            el.onloadedmetadata = () => {
+              if (currentAudioUrlRef.current !== url) return;
+              setAudioDuration(el.duration);
+              setAudioReady(true);
+              el.currentTime = s.positionSec;
+            };
+          }
+        }
+
       }
     }
     window.setTimeout(() => {
@@ -716,11 +657,8 @@ export const Room = ({ code }: { code: string }) => {
     const tick = () => {
       const s = stateRef.current;
       if (s?.media.kind === "audio" && !scrubbing) {
-        if (s.playing && sourceRef.current) {
-          setAudioPosition(audioPlayheadNow());
-        } else {
-          setAudioPosition(s.positionSec);
-        }
+        const el = audioElRef.current;
+        setAudioPosition(el ? el.currentTime : s.positionSec);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -760,40 +698,11 @@ export const Room = ({ code }: { code: string }) => {
     }
   }, [chat.length]);
 
-  /* ── Pre-decode next queued audio track ──────────────────────────── */
-  useEffect(() => {
-    const first = queue[0];
-    if (!first || first.media.kind !== "audio") return;
-    const url = first.media.url;
-    if (audioBufsRef.current.has(url)) return;
-    let isCancelled = false;
-    const ctx = ensureAudioCtx();
-    if (!ctx) return;
-    void (async () => {
-      try {
-        const res = await fetch(url);
-        if (isCancelled || !res.ok) return;
-        const bytes = await res.arrayBuffer();
-        if (isCancelled) return;
-        const decoded = await ctx.decodeAudioData(bytes);
-        if (isCancelled) return;
-        audioBufsRef.current.set(url, decoded);
-      } catch {
-        /* prefetch failed silently — no toast, no state update */
-      }
-    })();
-    return () => {
-      isCancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue]);
 
   /* ── Host control handlers ────────────────────────────────────────── */
   const onAudioPlay = () => {
     if (!isHost) return;
-    const ctx = audioCtxRef.current;
-    if (ctx?.state === "suspended") void ctx.resume();
-    const pos = stateRef.current?.positionSec ?? 0;
+    const pos = audioElRef.current?.currentTime ?? stateRef.current?.positionSec ?? 0;
     send({ type: "PLAY", positionSec: pos });
   };
   const onAudioPause = () => {
@@ -874,8 +783,8 @@ export const Room = ({ code }: { code: string }) => {
 
     setUploading(true);
     setUploadProgress({ done: 0, total: audio.length });
-    // Prime AudioContext on the user gesture so playback isn't blocked later.
-    ensureAudioCtx();
+    // Prime AudioContext + audio element on user gesture so autoplay isn't blocked later.
+    ensureAudioEl();
 
     const uploaded: Media[] = [];
     const failures: string[] = [];
@@ -1012,6 +921,27 @@ export const Room = ({ code }: { code: string }) => {
     );
   };
 
+  const openFilePicker = async () => {
+    // showOpenFilePicker opens Chrome's own file browser, bypassing Samsung's
+    // media intent chooser which never shows "Files". Falls back to the hidden
+    // <input> on browsers that don't support the File System Access API.
+    const fsp = (window as unknown as { showOpenFilePicker?: (o: object) => Promise<{ getFile(): Promise<File> }[]> }).showOpenFilePicker;
+    if (fsp) {
+      try {
+        const handles = await fsp({
+          multiple: true,
+          types: [{ description: "Audio", accept: { "audio/*": [".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".opus", ".flac", ".webm", ".wma", ".aiff", ".aif"] } }],
+        });
+        const files = await Promise.all(handles.map((h) => h.getFile()));
+        if (files.length > 0) void onUploadFiles(files);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") fileInputRef.current?.click();
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
   /* ── Chat ─────────────────────────────────────────────────────────── */
   const onSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1023,9 +953,12 @@ export const Room = ({ code }: { code: string }) => {
 
   const onResyncTap = () => {
     setAutoplayBlocked(false);
-    const ctx = audioCtxRef.current;
-    if (ctx?.state === "suspended") void ctx.resume();
+    const el = audioElRef.current;
     const s = stateRef.current;
+    if (el && s?.media.kind === "audio" && s.playing && el.paused) {
+      void el.play().catch(() => setAutoplayBlocked(true));
+      return;
+    }
     if (s) applyState(s);
   };
 
@@ -1040,207 +973,396 @@ export const Room = ({ code }: { code: string }) => {
 
   const isYouTube = state?.media.kind === "youtube";
   const isAudio = state?.media.kind === "audio";
+  // Mini-player shows on mobile when media is playing but user is not on the session tab.
+  const hasMiniPlayer = !isDesktop && state !== null && activeTab !== "session";
 
   const hostPeer = useMemo(
     () => peers.find((p) => p.id === hostId) ?? null,
     [peers, hostId]
   );
 
-  /* ── Sidebar panels (rendered on desktop or in mobile tabs) ───────── */
-  const queuePanel = (
+  /* ── Volume icon helper ───────────────────────────────────────────── */
+  const VolumeIcon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
+  /* ── Transport controls (shared between desktop stage and mobile session tab) ── */
+  const transportRow = (
+    <div className="pb-transport-row">
+      {isHost && state && (
+        <div className="pb-primary-controls">
+          <button
+            type="button"
+            className="pb-play-pill"
+            onClick={state.playing ? onAudioPause : onAudioPlay}
+            aria-label={state.playing ? "Pause" : "Play"}
+          >
+            {state.playing ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}
+            {state.playing ? "Pause" : "Play"}
+          </button>
+          <button
+            type="button"
+            className="pb-skip-pill"
+            onClick={onSkip}
+            disabled={queue.length === 0 && mode.repeat === "off"}
+            aria-label="Skip to next"
+          >
+            <SkipForward size={16} aria-hidden /> Skip
+          </button>
+        </div>
+      )}
+      <div className="pb-secondary-volume-row">
+        {isHost && state && (
+          <div className="pb-secondary-controls">
+            <button
+              type="button"
+              className={`pb-host-btn pb-host-btn-toggle${mode.shuffle ? " is-on" : ""}`}
+              onClick={onToggleShuffle}
+              aria-pressed={mode.shuffle}
+              title={mode.shuffle ? "Shuffle on" : "Shuffle off"}
+              aria-label="Toggle shuffle"
+            >
+              <Shuffle size={15} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`pb-host-btn pb-host-btn-toggle${mode.repeat !== "off" ? " is-on" : ""}`}
+              onClick={onCycleRepeat}
+              title={
+                mode.repeat === "off"
+                  ? "Repeat off"
+                  : mode.repeat === "all"
+                    ? "Repeat all"
+                    : "Repeat one"
+              }
+              aria-label="Cycle repeat mode"
+            >
+              {mode.repeat === "one"
+                ? <Repeat1 size={15} aria-hidden />
+                : <Repeat size={15} aria-hidden />}
+            </button>
+            <span className="pb-host-bar-label">Hosting</span>
+          </div>
+        )}
+        <label className="pb-volume" title="Your volume (local)">
+          <VolumeIcon size={16} aria-hidden className="pb-volume-icon" />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="pb-volume-slider"
+            aria-label="Your volume"
+          />
+        </label>
+      </div>
+    </div>
+  );
+
+  /* ── Stage content (player + seek bar + empty state) ─────────────── */
+  const stageContent = (
+    <>
+      {/* 16:9 frame for the YT iframe — always mounted so YT.Player has a stable target. */}
+      <div className="pb-yt-frame" style={{ display: isYouTube ? "block" : "none" }}>
+        <div id="pb-yt-player" className="pb-yt-player" />
+      </div>
+
+      {isAudio && state?.media.kind === "audio" && (
+        <>
+          {/* Square now-playing card — solid ink, no gradient */}
+          <div className="pb-now-playing-stage">
+            {audioReady ? (
+              <div
+                className={`pb-playing-bars pb-np-bars${state.playing ? "" : " is-paused"}`}
+                aria-hidden
+              >
+                <span /><span /><span />
+              </div>
+            ) : (
+              <p className="pb-np-loading">Loading…</p>
+            )}
+          </div>
+          <p className="pb-np-title-below">{state.media.title ?? "Now playing"}</p>
+          {/* Seek bar */}
+          {audioReady && (
+            <div className="pb-audio-player" style={{ marginBottom: "0.75rem" }}>
+              <span className="pb-audio-time">{formatTime(audioPosition)}</span>
+              <input
+                type="range"
+                className="pb-audio-seek"
+                min={0}
+                max={Math.max(audioDuration, 0.1)}
+                step={0.1}
+                value={Math.min(audioPosition, audioDuration)}
+                disabled={!isHost}
+                onChange={(e) => {
+                  setScrubbing(true);
+                  setAudioPosition(Number(e.target.value));
+                }}
+                onMouseUp={(e) =>
+                  onAudioSeekCommit(Number((e.target as HTMLInputElement).value))
+                }
+                onTouchEnd={(e) =>
+                  onAudioSeekCommit(Number((e.target as HTMLInputElement).value))
+                }
+                onKeyUp={(e) => {
+                  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                    onAudioSeekCommit(Number((e.target as HTMLInputElement).value));
+                  }
+                }}
+              />
+              <span className="pb-audio-time">{formatTime(audioDuration)}</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {!state && (
+        <div className="pb-room-empty">
+          <p className="pb-room-empty-title">Nothing playing yet.</p>
+          <p className="pb-room-empty-sub">
+            {isHost
+              ? "Drop tracks into the playlist — the first one plays right away."
+              : hostPeer
+                ? `Waiting for ${hostPeer.name} to start something.`
+                : "Waiting for someone to take the host seat."}
+          </p>
+        </div>
+      )}
+
+      {autoplayBlocked && activeTab === "session" && (
+        <button
+          type="button"
+          onClick={onResyncTap}
+          className="pb-action-btn pb-action-btn-secondary"
+          style={{ marginBottom: "1.5rem" }}
+        >
+          Tap to start playback
+        </button>
+      )}
+    </>
+  );
+
+  /* ── Media panel (queue + add tracks) ────────────────────────────── */
+  const mediaPanel = (
     <section
       className={`pb-side-panel pb-side-queue ${dragOver ? "is-drop-target" : ""}`}
-      aria-label="Playlist"
+      aria-label="Media"
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
     >
       <header className="pb-side-head">
-        <h2 className="pb-side-title">Playlist</h2>
+        <h2 className="pb-side-title">Queue</h2>
         <span className="pb-side-count">{queue.length}</span>
         {isHost && queue.length > 0 && (
           <button
             type="button"
             className="pb-side-action"
             onClick={onClearQueue}
-            title="Clear playlist"
+            title="Clear queue"
           >
             Clear
           </button>
         )}
-      </header>
-      {state && (
-        <div className="pb-now-playing" aria-label="Now playing">
-          <span className="pb-now-label">Now playing</span>
-          <span
-            className="pb-now-title"
-            title={mediaLabel(state.media)}
+        {(isHost || mode.guestCanUpload) && (
+          <button
+            type="button"
+            className={`pb-plus-btn${showAddPanel ? " is-open" : ""}`}
+            onClick={() => setShowAddPanel((v) => !v)}
+            aria-label={showAddPanel ? "Close add panel" : "Add tracks"}
+            title={showAddPanel ? "Close" : "Add tracks"}
           >
-            {mediaLabel(state.media)}
-          </span>
-          <span className={`pb-now-dot ${state.playing ? "is-playing" : ""}`} aria-hidden />
-        </div>
-      )}
-      {queue.length === 0 ? (
-        <p className="pb-side-empty">
-          Drop audio files here, pick many at once, or paste YouTube links below.
-        </p>
-      ) : (
-        <ol className="pb-queue-list">
-          {queue.map((item, i) => {
-            const canRemove = isHost || item.addedBy === selfId;
-            const isDragging = dragItemIdx === i;
-            return (
-              <li
-                key={item.id}
-                className={`pb-queue-item ${isDragging ? "is-dragging" : ""}`}
-                draggable={isHost}
-                onDragStart={() => onQueueItemDragStart(i)}
-                onDragOver={onQueueItemDragOver}
-                onDrop={(e) => {
-                  e.stopPropagation();
-                  onQueueItemDrop(i);
-                }}
-                onDragEnd={() => setDragItemIdx(null)}
-              >
-                {isHost ? (
-                  <span className="pb-queue-handle" aria-hidden title="Drag to reorder">⋮⋮</span>
-                ) : (
-                  <span className="pb-queue-index">{i + 1}</span>
-                )}
-                <span className="pb-queue-title" title={mediaLabel(item.media)}>
-                  {mediaLabel(item.media)}
-                </span>
-                <span className="pb-queue-actions">
-                  {isHost && (
-                    <button
-                      type="button"
-                      className="pb-queue-btn"
-                      onClick={() => onPlayNow(item)}
-                      title="Play now"
-                      aria-label="Play now"
-                    >
-                      ▶
-                    </button>
-                  )}
-                  {canRemove && (
-                    <button
-                      type="button"
-                      className="pb-queue-btn pb-queue-btn-faint"
-                      onClick={() => onRemoveQueueItem(item)}
-                      title="Remove"
-                      aria-label="Remove from playlist"
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+            <Plus size={15} aria-hidden />
+          </button>
+        )}
+      </header>
 
-      {(isHost || mode.guestCanUpload) ? (
-        <div className="pb-room-controls" style={{ marginTop: "1rem" }}>
-          <p className="pb-action-label" style={{ marginBottom: "0.6rem" }}>
-            {isHost ? "Build the playlist" : "Add tracks"}
-            {uploadProgress &&
-              ` · uploading ${uploadProgress.done}/${uploadProgress.total}`}
-          </p>
+      {showAddPanel && (isHost || mode.guestCanUpload) && (
+        <div className="pb-add-panel">
           <div className="pb-room-actions">
-            <label
+            <button
+              type="button"
               className="pb-action-btn"
-              style={{ cursor: uploading ? "progress" : "pointer" }}
+              style={{ cursor: uploading ? "progress" : "pointer", fontSize: "0.85rem", padding: "0.6rem 1rem" }}
+              disabled={uploading}
+              onClick={() => void openFilePicker()}
             >
-              {uploading ? "Uploading…" : "+ Add tracks"}
-              <input
-                type="file"
-                multiple
-                // Extensions only — NO audio/* wildcard. On Android,
-                // audio/* triggers the full media chooser (Camera, Voice
-                // Recorder, Photos). Explicit extensions open Files directly.
-                accept=".mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,.wma,.aiff,.aif"
-                disabled={uploading}
-                onChange={(e) => {
-                  const fs = Array.from(e.target.files ?? []);
-                  if (fs.length > 0) void onUploadFiles(fs);
-                  e.target.value = "";
-                }}
-                style={{ display: "none" }}
-              />
-            </label>
+              {uploading
+                ? `Uploading… ${uploadProgress ? `${uploadProgress.done}/${uploadProgress.total}` : ""}`
+                : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />Add audio</>}
+            </button>
             <button
               type="button"
               onClick={() => setShowYtForm((v) => !v)}
               className="pb-action-btn pb-action-btn-secondary"
+              style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}
             >
-              {showYtForm ? "Cancel" : "+ YouTube"}
+              {showYtForm ? "Cancel" : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />YouTube</>}
             </button>
           </div>
           {showYtForm && (
-            <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.75rem" }}>
+            <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.65rem" }}>
               <div className="pb-room-form-row pb-room-form-col">
                 <textarea
                   className="pb-input pb-textarea"
                   value={ytUrl}
                   onChange={(e) => setYtUrl(e.target.value)}
-                  placeholder={
-                    "Paste videos or playlists (?list=…) — one per line"
-                  }
+                  placeholder="Paste videos or playlists (?list=…) — one per line"
                   rows={3}
                   autoFocus
                   disabled={importingPlaylist}
                 />
-                <button type="submit" className="pb-action-btn" disabled={importingPlaylist}>
+                <button type="submit" className="pb-action-btn" disabled={importingPlaylist} style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}>
                   {importingPlaylist ? "Importing…" : "Add"}
                 </button>
               </div>
             </form>
           )}
-          <p className="pb-room-hint" style={{ marginTop: "0.6rem" }}>
-            Pick many tracks at once, drop a folder here, or paste a YouTube
-            playlist URL. 15&nbsp;MB per file.
+          <p className="pb-room-hint" style={{ marginTop: "0.5rem", fontSize: "0.82rem" }}>
+            Pick many tracks at once or drop a folder here. 15&nbsp;MB per file.
           </p>
+          {isHost && (
+            <div className="pb-guest-toggle-row">
+              <span className="pb-guest-toggle-label">Allow guest uploads</span>
+              <button
+                type="button"
+                className={`pb-guest-toggle-btn${mode.guestCanUpload ? " is-on" : ""}`}
+                onClick={() => send({ type: "SET_MODE", mode: { guestCanUpload: !mode.guestCanUpload } })}
+                aria-pressed={mode.guestCanUpload}
+              >
+                {mode.guestCanUpload ? "On" : "Off"}
+              </button>
+            </div>
+          )}
         </div>
-      ) : (
-        <p className="pb-admin-card-body" style={{ textAlign: "center", marginTop: "1rem" }}>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        disabled={uploading}
+        onChange={(e) => {
+          const fs = Array.from(e.target.files ?? []);
+          if (fs.length > 0) void onUploadFiles(fs);
+          e.target.value = "";
+        }}
+        style={{ display: "none" }}
+      />
+
+      {queue.length === 0 && !state ? (
+        <p className="pb-side-empty">
+          {isHost || mode.guestCanUpload
+            ? "Drop audio files here or use the + button above."
+            : "Only the host can add tracks."}
+        </p>
+      ) : queue.length === 0 ? null : (
+        <>
+          <p className="pb-up-next-label">Up next</p>
+          <ol className="pb-queue-list">
+            {queue.map((item, i) => {
+              const canRemove = isHost || item.addedBy === selfId;
+              const isDragging = dragItemIdx === i;
+              const isAudioItem = item.media.kind === "audio";
+              const trackTitle = item.media.kind === "audio"
+                ? (item.media.title ?? "Untitled")
+                : `YouTube · ${item.media.videoId}`;
+              return (
+                <li
+                  key={item.id}
+                  className={`pb-queue-item ${isDragging ? "is-dragging" : ""}`}
+                  draggable={isHost}
+                  onDragStart={() => onQueueItemDragStart(i)}
+                  onDragOver={onQueueItemDragOver}
+                  onDrop={(e) => {
+                    e.stopPropagation();
+                    onQueueItemDrop(i);
+                  }}
+                  onDragEnd={() => setDragItemIdx(null)}
+                >
+                  <div
+                    className={`pb-track-thumb${isAudioItem ? "" : " pb-track-thumb-yt"}`}
+                    aria-hidden
+                  >
+                    {isAudioItem
+                      ? <Music2 size={15} />
+                      : <span className="pb-yt-label">YT</span>}
+                  </div>
+                  <div className="pb-track-info">
+                    <span className="pb-queue-title" title={trackTitle}>
+                      {trackTitle}
+                    </span>
+                    <span className={`pb-track-badge${isAudioItem ? "" : " pb-track-badge-yt"}`}>
+                      {isAudioItem ? "audio" : "YouTube"}
+                    </span>
+                  </div>
+                  <span className="pb-queue-actions">
+                    {isHost && (
+                      <button
+                        type="button"
+                        className="pb-queue-btn"
+                        onClick={() => onPlayNow(item)}
+                        title="Play now"
+                        aria-label="Play now"
+                      >
+                        <Play size={13} aria-hidden />
+                      </button>
+                    )}
+                    {canRemove && (
+                      <button
+                        type="button"
+                        className="pb-queue-btn pb-queue-btn-faint"
+                        onClick={() => onRemoveQueueItem(item)}
+                        title="Remove"
+                        aria-label="Remove from queue"
+                      >
+                        <XIcon size={13} aria-hidden />
+                      </button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+
+      {!isHost && !mode.guestCanUpload && queue.length > 0 && (
+        <p className="pb-admin-card-body" style={{ fontSize: "0.82rem", marginTop: "0.75rem", color: "var(--pb-text-faint)" }}>
           Only the host can add tracks.
         </p>
       )}
     </section>
   );
 
-  const peoplePanel = (
-    <section className="pb-side-panel pb-side-people" aria-label="People">
-      <header className="pb-side-head">
-        <h2 className="pb-side-title">In the room</h2>
-        <span className="pb-side-count">{peers.length || 1}</span>
-      </header>
-      <ul className="pb-people-list">
-        {peers.map((p) => {
-          const you = p.id === selfId;
-          const host = p.id === hostId;
-          return (
-            <li key={p.id} className="pb-people-item">
-              <span className="pb-people-dot" aria-hidden />
-              <span className="pb-people-name">
-                {p.name}
-                {you && <span className="pb-people-tag"> · you</span>}
-              </span>
-              {host && <span className="pb-people-badge">host</span>}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
+  /* ── People — compact horizontal chips in the session tab ─────────── */
+  const peoplePillRow = peers.length > 0 ? (
+    <div className="pb-people-chips" aria-label="People in the room">
+      {peers.map((p) => {
+        const you = p.id === selfId;
+        const host = p.id === hostId;
+        return (
+          <span
+            key={p.id}
+            className={`pb-people-chip${host ? " is-host" : ""}${you ? " is-you" : ""}`}
+          >
+            {p.name}
+            {you && <span className="pb-chip-tag">you</span>}
+            {host && <span className="pb-chip-tag">host</span>}
+          </span>
+        );
+      })}
+    </div>
+  ) : null;
 
+  /* ── Chat panel ───────────────────────────────────────────────────── */
   const chatPanel = (
     <section className="pb-side-panel pb-side-chat" aria-label="Chat">
       <header className="pb-side-head">
-        <h2 className="pb-side-title">Chat</h2>
+        <MessageCircle size={13} aria-hidden style={{ color: "var(--pb-text-soft)", flexShrink: 0 }} />
+        <h2 className="pb-side-title" style={{ marginLeft: "0.35rem" }}>Chat</h2>
         <span className="pb-side-count">{chat.length}</span>
       </header>
       <div className="pb-chat-scroll" ref={chatScrollRef}>
@@ -1283,12 +1405,12 @@ export const Room = ({ code }: { code: string }) => {
   );
 
   return (
-    <div className="pb-welcome pb-room">
+    <div className={`pb-welcome pb-room${hasMiniPlayer ? " pb-has-mini" : ""}`}>
       <div className="pb-topbar" aria-hidden />
       <header className="pb-welcome-header">
         <WordMark asLink />
         <div className="pb-room-meta">
-          <button type="button" onClick={onCopyCode} className="pb-room-code" title="Copy">
+          <button type="button" onClick={onCopyCode} className="pb-room-code" title="Copy room code">
             {code}
           </button>
           <span className={`pb-room-dot ${connected ? "is-live" : ""}`} aria-hidden />
@@ -1298,225 +1420,113 @@ export const Room = ({ code }: { code: string }) => {
         </div>
       </header>
 
-      <main id="main" className={`pb-welcome-main pb-room-main ${isDesktop ? "pb-room-grid" : ""}`}>
-        <div className="pb-room-stage">
-          {/* 16:9 frame for the YT iframe — always mounted so YT.Player has a stable target. */}
-          <div className="pb-yt-frame" style={{ display: isYouTube ? "block" : "none" }}>
-            <div id="pb-yt-player" className="pb-yt-player" />
+      {/* ── Unified tab bar — text labels on desktop, icons+labels on mobile ── */}
+      <nav className="pb-room-tabbar" aria-label="Room sections">
+        <button
+          id="pb-tab-btn-session"
+          role="tab"
+          aria-controls="pb-tab-session"
+          aria-selected={activeTab === "session"}
+          className={`pb-room-tab${activeTab === "session" ? " is-active" : ""}`}
+          onClick={() => setActiveTab("session")}
+        >
+          <Headphones size={20} aria-hidden className="pb-room-tab-icon" />
+          <span>Session</span>
+        </button>
+        <button
+          id="pb-tab-btn-media"
+          role="tab"
+          aria-controls="pb-tab-media"
+          aria-selected={activeTab === "media"}
+          className={`pb-room-tab${activeTab === "media" ? " is-active" : ""}`}
+          onClick={() => setActiveTab("media")}
+        >
+          <ListMusic size={20} aria-hidden className="pb-room-tab-icon" />
+          <span>Media{queue.length > 0 ? ` · ${queue.length}` : ""}</span>
+        </button>
+        <button
+          id="pb-tab-btn-chat"
+          role="tab"
+          aria-controls="pb-tab-chat"
+          aria-selected={activeTab === "chat"}
+          className={`pb-room-tab${activeTab === "chat" ? " is-active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          <MessageCircle size={20} aria-hidden className="pb-room-tab-icon" />
+          <span>Chat{chat.length > 0 ? ` · ${chat.length}` : ""}</span>
+        </button>
+      </nav>
+
+      <main id="main" className="pb-welcome-main pb-room-main">
+        {/* Session tab — stage + transport + people chips + hint */}
+        <div
+          role="tabpanel"
+          id="pb-tab-session"
+          aria-labelledby="pb-tab-btn-session"
+          hidden={activeTab !== "session"}
+        >
+          <div className="pb-room-stage">
+            {stageContent}
           </div>
-
-          {isAudio && state?.media.kind === "audio" && (
-            <div className="pb-audio-frame">
-              <p className="pb-audio-title">{state.media.title ?? "Now playing"}</p>
-              {!audioReady ? (
-                <p className="pb-audio-loading">Loading…</p>
-              ) : (
-                <div className="pb-audio-player">
-                  <button
-                    type="button"
-                    className="pb-audio-btn"
-                    onClick={state.playing ? onAudioPause : onAudioPlay}
-                    disabled={!isHost}
-                    title={isHost ? undefined : "Only the host can control playback"}
-                    aria-label={state.playing ? "Pause" : "Play"}
-                  >
-                    {state.playing ? "❚❚" : "▶"}
-                  </button>
-                  <span className="pb-audio-time">{formatTime(audioPosition)}</span>
-                  <input
-                    type="range"
-                    className="pb-audio-seek"
-                    min={0}
-                    max={Math.max(audioDuration, 0.1)}
-                    step={0.1}
-                    value={Math.min(audioPosition, audioDuration)}
-                    disabled={!isHost}
-                    onChange={(e) => {
-                      setScrubbing(true);
-                      setAudioPosition(Number(e.target.value));
-                    }}
-                    onMouseUp={(e) =>
-                      onAudioSeekCommit(Number((e.target as HTMLInputElement).value))
-                    }
-                    onTouchEnd={(e) =>
-                      onAudioSeekCommit(Number((e.target as HTMLInputElement).value))
-                    }
-                    onKeyUp={(e) => {
-                      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-                        onAudioSeekCommit(Number((e.target as HTMLInputElement).value));
-                      }
-                    }}
-                  />
-                  <span className="pb-audio-time">{formatTime(audioDuration)}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {!state && (
-            <div className="pb-room-empty">
-              <p className="pb-room-empty-title">Nothing playing yet.</p>
-              <p className="pb-room-empty-sub">
-                {isHost
-                  ? "Drop tracks into the playlist — the first one plays right away."
-                  : hostPeer
-                    ? `Waiting for ${hostPeer.name} to start something.`
-                    : "Waiting for someone to take the host seat."}
-              </p>
-            </div>
-          )}
-
-          {autoplayBlocked && (
-            <button
-              type="button"
-              onClick={onResyncTap}
-              className="pb-action-btn pb-action-btn-secondary"
-              style={{ marginBottom: "1.5rem" }}
-            >
-              Tap to start playback
-            </button>
-          )}
-
-          {/* Transport row — host gets play/pause/skip; everyone gets a local volume slider. */}
-          <div className="pb-transport-row">
-            {isHost && state && (
-              <div className="pb-host-bar">
-                <button
-                  type="button"
-                  className="pb-host-btn"
-                  onClick={state.playing ? onAudioPause : onAudioPlay}
-                  aria-label={state.playing ? "Pause" : "Play"}
-                  title={state.playing ? "Pause" : "Play"}
-                >
-                  {state.playing ? "❚❚" : "▶"}
-                </button>
-                <button
-                  type="button"
-                  className="pb-host-btn"
-                  onClick={onSkip}
-                  disabled={queue.length === 0 && mode.repeat === "off"}
-                  aria-label="Skip to next"
-                  title="Skip to next"
-                >
-                  ⏭
-                </button>
-                <button
-                  type="button"
-                  className={`pb-host-btn pb-host-btn-toggle ${mode.shuffle ? "is-on" : ""}`}
-                  onClick={onToggleShuffle}
-                  aria-pressed={mode.shuffle}
-                  title={mode.shuffle ? "Shuffle on" : "Shuffle off"}
-                  aria-label="Toggle shuffle"
-                >
-                  ⤮
-                </button>
-                <button
-                  type="button"
-                  className={`pb-host-btn pb-host-btn-toggle ${mode.repeat !== "off" ? "is-on" : ""}`}
-                  onClick={onCycleRepeat}
-                  title={
-                    mode.repeat === "off"
-                      ? "Repeat off"
-                      : mode.repeat === "all"
-                        ? "Repeat all"
-                        : "Repeat one"
-                  }
-                  aria-label="Cycle repeat mode"
-                >
-                  {mode.repeat === "one" ? "🔂" : "🔁"}
-                </button>
-                <button
-                  type="button"
-                  className={`pb-host-btn pb-host-btn-toggle ${mode.guestCanUpload ? "is-on" : ""}`}
-                  onClick={() => send({ type: "SET_MODE", mode: { guestCanUpload: !mode.guestCanUpload } })}
-                  aria-pressed={mode.guestCanUpload}
-                  title={mode.guestCanUpload ? "Guest uploads on — click to restrict" : "Allow guests to add tracks"}
-                  aria-label="Toggle guest uploads"
-                >
-                  ↑G
-                </button>
-                <span className="pb-host-bar-label">Hosting</span>
-              </div>
-            )}
-            <label className="pb-volume" title="Your volume (local)">
-              <span className="pb-volume-icon" aria-hidden>
-                {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="pb-volume-slider"
-                aria-label="Your volume"
-              />
-            </label>
-          </div>
-
-          <p className="pb-room-hint">
+          {transportRow}
+          {peoplePillRow}
+          <p className="pb-room-hint" style={{ marginTop: "0.5rem" }}>
             Share <strong>{code}</strong> to bring people in. Audio uploads are
             capped at 15&nbsp;MB.
             {!isHost && hostPeer && (
-              <>
-                {" "}
-                <span style={{ color: "var(--pb-text-soft)" }}>
-                  {hostPeer.name} is the host.
-                </span>
-              </>
+              <>{" "}<span style={{ color: "var(--pb-text-soft)" }}>{hostPeer.name} is the host.</span></>
             )}
           </p>
         </div>
 
-        {/* Sidebar — pinned on desktop, tabbed on mobile */}
-        {isDesktop ? (
-          <aside className="pb-room-side">
-            {queuePanel}
-            {peoplePanel}
-            {chatPanel}
-          </aside>
-        ) : (
-          <div className="pb-mobile-tabs">
-            <div className="pb-mobile-tabbar" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileTab === "queue"}
-                className={`pb-mobile-tab ${mobileTab === "queue" ? "is-active" : ""}`}
-                onClick={() => setMobileTab("queue")}
-              >
-                Playlist · {queue.length}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileTab === "chat"}
-                className={`pb-mobile-tab ${mobileTab === "chat" ? "is-active" : ""}`}
-                onClick={() => setMobileTab("chat")}
-              >
-                Chat · {chat.length}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileTab === "people"}
-                className={`pb-mobile-tab ${mobileTab === "people" ? "is-active" : ""}`}
-                onClick={() => setMobileTab("people")}
-              >
-                People · {peers.length || 1}
-              </button>
-            </div>
-            <div className="pb-mobile-tabpanel">
-              {mobileTab === "queue"
-                ? queuePanel
-                : mobileTab === "chat"
-                  ? chatPanel
-                  : peoplePanel}
-            </div>
-          </div>
-        )}
+        {/* Media tab — queue + add panel */}
+        <div
+          role="tabpanel"
+          id="pb-tab-media"
+          aria-labelledby="pb-tab-btn-media"
+          hidden={activeTab !== "media"}
+        >
+          {mediaPanel}
+        </div>
+
+        {/* Chat tab */}
+        <div
+          role="tabpanel"
+          id="pb-tab-chat"
+          aria-labelledby="pb-tab-btn-chat"
+          hidden={activeTab !== "chat"}
+        >
+          {chatPanel}
+        </div>
       </main>
+
+      {/* ── Mini-player: mobile, when playing, not in session tab ──── */}
+      {hasMiniPlayer && (
+        <aside className="pb-mini-player" aria-label="Now playing">
+          <div
+            className={`pb-playing-bars pb-mini-bars${state!.playing ? "" : " is-paused"}`}
+            aria-hidden
+          >
+            <span /><span /><span />
+          </div>
+          <div className="pb-mini-info">
+            <p className="pb-mini-title">{mediaLabel(state!.media)}</p>
+            {autoplayBlocked && <p className="pb-mini-sub">Tap to start</p>}
+          </div>
+          {(isHost || autoplayBlocked) && (
+            <button
+              type="button"
+              className="pb-mini-btn"
+              onClick={autoplayBlocked ? onResyncTap : (state!.playing ? onAudioPause : onAudioPlay)}
+              aria-label={state!.playing && !autoplayBlocked ? "Pause" : "Play"}
+            >
+              {state!.playing && !autoplayBlocked
+                ? <Pause size={16} aria-hidden />
+                : <Play size={16} aria-hidden />}
+            </button>
+          )}
+        </aside>
+      )}
     </div>
   );
 };
