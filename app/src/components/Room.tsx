@@ -201,7 +201,6 @@ export const Room = ({ code }: { code: string }) => {
   const [audioPosition, setAudioPosition] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
   const [activeTab, setActiveTab] = useState<"session" | "media" | "chat">("session");
-  const [showAddPanel, setShowAddPanel] = useState(false);
   // Lazy init so we don't trigger a second render just to read localStorage.
   const [volume, setVolume] = useState<number>(1);
   const [name] = useState<string>(() => {
@@ -1130,7 +1129,7 @@ export const Room = ({ code }: { code: string }) => {
         </div>
       )}
 
-      {autoplayBlocked && activeTab === "session" && (
+      {autoplayBlocked && (isDesktop || activeTab === "session") && (
         <button
           type="button"
           onClick={onResyncTap}
@@ -1143,11 +1142,10 @@ export const Room = ({ code }: { code: string }) => {
     </>
   );
 
-  /* ── Media panel (queue + add tracks) ────────────────────────────── */
-  const mediaPanel = (
-    <section
-      className={`pb-side-panel pb-side-queue ${dragOver ? "is-drop-target" : ""}`}
-      aria-label="Media"
+  /* ── Queue rows — shared between desktop center column and mobile media tab ── */
+  const queueRows = (
+    <div
+      className={`pb-queue-section${dragOver ? " is-drop-target" : ""}`}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragEnter={onDragEnter}
@@ -1157,106 +1155,14 @@ export const Room = ({ code }: { code: string }) => {
         <h2 className="pb-side-title">Queue</h2>
         <span className="pb-side-count">{queue.length}</span>
         {isHost && queue.length > 0 && (
-          <button
-            type="button"
-            className="pb-side-action"
-            onClick={onClearQueue}
-            title="Clear queue"
-          >
+          <button type="button" className="pb-side-action" onClick={onClearQueue} title="Clear queue">
             Clear
           </button>
         )}
-        {(isHost || mode.guestCanUpload) && (
-          <button
-            type="button"
-            className={`pb-plus-btn${showAddPanel ? " is-open" : ""}`}
-            onClick={() => setShowAddPanel((v) => !v)}
-            aria-label={showAddPanel ? "Close add panel" : "Add tracks"}
-            title={showAddPanel ? "Close" : "Add tracks"}
-          >
-            <Plus size={15} aria-hidden />
-          </button>
-        )}
       </header>
-
-      {showAddPanel && (isHost || mode.guestCanUpload) && (
-        <div className="pb-add-panel">
-          <div className="pb-room-actions">
-            <button
-              type="button"
-              className="pb-action-btn"
-              style={{ cursor: uploading ? "progress" : "pointer", fontSize: "0.85rem", padding: "0.6rem 1rem" }}
-              disabled={uploading}
-              onClick={() => void openFilePicker()}
-            >
-              {uploading
-                ? `Uploading… ${uploadProgress ? `${uploadProgress.done}/${uploadProgress.total}` : ""}`
-                : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />Add audio</>}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowYtForm((v) => !v)}
-              className="pb-action-btn pb-action-btn-secondary"
-              style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}
-            >
-              {showYtForm ? "Cancel" : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />YouTube</>}
-            </button>
-          </div>
-          {showYtForm && (
-            <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.65rem" }}>
-              <div className="pb-room-form-row pb-room-form-col">
-                <textarea
-                  className="pb-input pb-textarea"
-                  value={ytUrl}
-                  onChange={(e) => setYtUrl(e.target.value)}
-                  placeholder="Paste videos or playlists (?list=…) — one per line"
-                  rows={3}
-                  autoFocus
-                  disabled={importingPlaylist}
-                />
-                <button type="submit" className="pb-action-btn" disabled={importingPlaylist} style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}>
-                  {importingPlaylist ? "Importing…" : "Add"}
-                </button>
-              </div>
-            </form>
-          )}
-          <p className="pb-room-hint" style={{ marginTop: "0.5rem", fontSize: "0.82rem" }}>
-            Pick many tracks at once or drop a folder here. 15&nbsp;MB per file.
-          </p>
-          {isHost && (
-            <div className="pb-guest-toggle-row">
-              <span className="pb-guest-toggle-label">Allow guest uploads</span>
-              <button
-                type="button"
-                className={`pb-guest-toggle-btn${mode.guestCanUpload ? " is-on" : ""}`}
-                onClick={() => send({ type: "SET_MODE", mode: { guestCanUpload: !mode.guestCanUpload } })}
-                aria-pressed={mode.guestCanUpload}
-              >
-                {mode.guestCanUpload ? "On" : "Off"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        disabled={uploading}
-        onChange={(e) => {
-          const fs = Array.from(e.target.files ?? []);
-          if (fs.length > 0) void onUploadFiles(fs);
-          e.target.value = "";
-        }}
-        style={{ display: "none" }}
-      />
-
       {queue.length === 0 && !state ? (
         <p className="pb-side-empty">
-          {isHost || mode.guestCanUpload
-            ? "Drop audio files here or use the + button above."
-            : "Only the host can add tracks."}
+          {isHost || mode.guestCanUpload ? "Drop audio files here." : "Only the host can add tracks."}
         </p>
       ) : queue.length === 0 ? null : (
         <>
@@ -1272,52 +1178,28 @@ export const Room = ({ code }: { code: string }) => {
               return (
                 <li
                   key={item.id}
-                  className={`pb-queue-item ${isDragging ? "is-dragging" : ""}`}
+                  className={`pb-queue-item${isDragging ? " is-dragging" : ""}`}
                   draggable={isHost}
                   onDragStart={() => onQueueItemDragStart(i)}
                   onDragOver={onQueueItemDragOver}
-                  onDrop={(e) => {
-                    e.stopPropagation();
-                    onQueueItemDrop(i);
-                  }}
+                  onDrop={(e) => { e.stopPropagation(); onQueueItemDrop(i); }}
                   onDragEnd={() => setDragItemIdx(null)}
                 >
-                  <div
-                    className={`pb-track-thumb${isAudioItem ? "" : " pb-track-thumb-yt"}`}
-                    aria-hidden
-                  >
-                    {isAudioItem
-                      ? <Music2 size={15} />
-                      : <span className="pb-yt-label">YT</span>}
+                  <div className="pb-track-thumb" aria-hidden>
+                    {isAudioItem ? <Music2 size={15} /> : <span className="pb-yt-label">YT</span>}
                   </div>
                   <div className="pb-track-info">
-                    <span className="pb-queue-title" title={trackTitle}>
-                      {trackTitle}
-                    </span>
-                    <span className={`pb-track-badge${isAudioItem ? "" : " pb-track-badge-yt"}`}>
-                      {isAudioItem ? "audio" : "YouTube"}
-                    </span>
+                    <span className="pb-queue-title" title={trackTitle}>{trackTitle}</span>
+                    <span className="pb-track-badge">{isAudioItem ? "audio" : "YouTube"}</span>
                   </div>
                   <span className="pb-queue-actions">
                     {isHost && (
-                      <button
-                        type="button"
-                        className="pb-queue-btn"
-                        onClick={() => onPlayNow(item)}
-                        title="Play now"
-                        aria-label="Play now"
-                      >
+                      <button type="button" className="pb-queue-btn" onClick={() => onPlayNow(item)} title="Play now" aria-label="Play now">
                         <Play size={13} aria-hidden />
                       </button>
                     )}
                     {canRemove && (
-                      <button
-                        type="button"
-                        className="pb-queue-btn pb-queue-btn-faint"
-                        onClick={() => onRemoveQueueItem(item)}
-                        title="Remove"
-                        aria-label="Remove from queue"
-                      >
+                      <button type="button" className="pb-queue-btn pb-queue-btn-faint" onClick={() => onRemoveQueueItem(item)} title="Remove" aria-label="Remove from queue">
                         <XIcon size={13} aria-hidden />
                       </button>
                     )}
@@ -1328,26 +1210,89 @@ export const Room = ({ code }: { code: string }) => {
           </ol>
         </>
       )}
-
       {!isHost && !mode.guestCanUpload && queue.length > 0 && (
-        <p className="pb-admin-card-body" style={{ fontSize: "0.82rem", marginTop: "0.75rem", color: "var(--pb-text-faint)" }}>
-          Only the host can add tracks.
-        </p>
+        <p className="pb-side-empty" style={{ marginTop: "0.75rem" }}>Only the host can add tracks.</p>
       )}
+    </div>
+  );
+
+  /* ── Add controls — upload button + YouTube form, used in left sidebar (desktop) and media tab (mobile) ── */
+  const addControls = (isHost || mode.guestCanUpload) ? (
+    <div className="pb-add-controls">
+      <div className="pb-room-actions">
+        <button
+          type="button"
+          className="pb-action-btn"
+          style={{ cursor: uploading ? "progress" : "pointer", fontSize: "0.85rem", padding: "0.6rem 1rem" }}
+          disabled={uploading}
+          onClick={() => void openFilePicker()}
+        >
+          {uploading
+            ? `Uploading… ${uploadProgress ? `${uploadProgress.done}/${uploadProgress.total}` : ""}`
+            : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />Add audio</>}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowYtForm((v) => !v)}
+          className="pb-action-btn pb-action-btn-secondary"
+          style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}
+        >
+          {showYtForm ? "Cancel" : <><Plus size={13} aria-hidden style={{ display: "inline", marginRight: "0.3rem", verticalAlign: "middle" }} />YouTube</>}
+        </button>
+      </div>
+      {showYtForm && (
+        <form onSubmit={onSetYouTube} className="pb-room-form" style={{ marginTop: "0.65rem" }}>
+          <div className="pb-room-form-row pb-room-form-col">
+            <textarea
+              className="pb-input pb-textarea"
+              value={ytUrl}
+              onChange={(e) => setYtUrl(e.target.value)}
+              placeholder="Paste videos or playlists (?list=…) — one per line"
+              rows={3}
+              autoFocus
+              disabled={importingPlaylist}
+            />
+            <button type="submit" className="pb-action-btn" disabled={importingPlaylist} style={{ fontSize: "0.85rem", padding: "0.6rem 1rem" }}>
+              {importingPlaylist ? "Importing…" : "Add"}
+            </button>
+          </div>
+        </form>
+      )}
+      <p className="pb-room-hint" style={{ marginTop: "0.5rem", fontSize: "0.82rem" }}>
+        Pick many tracks at once or drop here. 15&nbsp;MB per file.
+      </p>
+      {isHost && (
+        <div className="pb-guest-toggle-row">
+          <span className="pb-guest-toggle-label">Allow guest uploads</span>
+          <button
+            type="button"
+            className={`pb-guest-toggle-btn${mode.guestCanUpload ? " is-on" : ""}`}
+            onClick={() => send({ type: "SET_MODE", mode: { guestCanUpload: !mode.guestCanUpload } })}
+            aria-pressed={mode.guestCanUpload}
+          >
+            {mode.guestCanUpload ? "On" : "Off"}
+          </button>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  /* ── Mobile media panel — queue + add controls in a card ────────── */
+  const mediaPanel = (
+    <section className={`pb-side-panel pb-side-queue${dragOver ? " is-drop-target" : ""}`} aria-label="Media">
+      {queueRows}
+      {addControls && <div style={{ marginTop: "0.75rem" }}>{addControls}</div>}
     </section>
   );
 
-  /* ── People — compact horizontal chips in the session tab ─────────── */
+  /* ── People — horizontal chips for mobile session tab ───────────── */
   const peoplePillRow = peers.length > 0 ? (
     <div className="pb-people-chips" aria-label="People in the room">
       {peers.map((p) => {
         const you = p.id === selfId;
         const host = p.id === hostId;
         return (
-          <span
-            key={p.id}
-            className={`pb-people-chip${host ? " is-host" : ""}${you ? " is-you" : ""}`}
-          >
+          <span key={p.id} className={`pb-people-chip${host ? " is-host" : ""}`}>
             {p.name}
             {you && <span className="pb-chip-tag">you</span>}
             {host && <span className="pb-chip-tag">host</span>}
@@ -1404,8 +1349,25 @@ export const Room = ({ code }: { code: string }) => {
     </section>
   );
 
+  /* Hidden file input — always in the DOM so openFilePicker() can trigger it */
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      multiple
+      disabled={uploading}
+      onChange={(e) => {
+        const fs = Array.from(e.target.files ?? []);
+        if (fs.length > 0) void onUploadFiles(fs);
+        e.target.value = "";
+      }}
+      style={{ display: "none" }}
+    />
+  );
+
   return (
     <div className={`pb-welcome pb-room${hasMiniPlayer ? " pb-has-mini" : ""}`}>
+      {fileInput}
       <div className="pb-topbar" aria-hidden />
       <header className="pb-welcome-header">
         <WordMark asLink />
@@ -1420,112 +1382,149 @@ export const Room = ({ code }: { code: string }) => {
         </div>
       </header>
 
-      {/* ── Unified tab bar — text labels on desktop, icons+labels on mobile ── */}
-      <nav className="pb-room-tabbar" aria-label="Room sections">
-        <button
-          id="pb-tab-btn-session"
-          role="tab"
-          aria-controls="pb-tab-session"
-          aria-selected={activeTab === "session"}
-          className={`pb-room-tab${activeTab === "session" ? " is-active" : ""}`}
-          onClick={() => setActiveTab("session")}
-        >
-          <Headphones size={20} aria-hidden className="pb-room-tab-icon" />
-          <span>Session</span>
-        </button>
-        <button
-          id="pb-tab-btn-media"
-          role="tab"
-          aria-controls="pb-tab-media"
-          aria-selected={activeTab === "media"}
-          className={`pb-room-tab${activeTab === "media" ? " is-active" : ""}`}
-          onClick={() => setActiveTab("media")}
-        >
-          <ListMusic size={20} aria-hidden className="pb-room-tab-icon" />
-          <span>Media{queue.length > 0 ? ` · ${queue.length}` : ""}</span>
-        </button>
-        <button
-          id="pb-tab-btn-chat"
-          role="tab"
-          aria-controls="pb-tab-chat"
-          aria-selected={activeTab === "chat"}
-          className={`pb-room-tab${activeTab === "chat" ? " is-active" : ""}`}
-          onClick={() => setActiveTab("chat")}
-        >
-          <MessageCircle size={20} aria-hidden className="pb-room-tab-icon" />
-          <span>Chat{chat.length > 0 ? ` · ${chat.length}` : ""}</span>
-        </button>
-      </nav>
+      {isDesktop ? (
+        /* ── Desktop: three-column layout ─────────────────────────── */
+        <>
+          <div className="pb-room-body">
+            {/* Left sidebar — people + upload controls */}
+            <aside className="pb-room-left">
+              <p className="pb-left-label">In the room</p>
+              <ul className="pb-people-list">
+                {peers.map((p) => {
+                  const you = p.id === selfId;
+                  const host = p.id === hostId;
+                  return (
+                    <li key={p.id} className="pb-people-item">
+                      <span className="pb-people-dot" aria-hidden />
+                      <span className="pb-people-name">
+                        {p.name}
+                        {you && <span className="pb-people-tag"> · you</span>}
+                      </span>
+                      {host && <span className="pb-people-badge">host</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+              {addControls && (
+                <>
+                  <div className="pb-left-divider" />
+                  {addControls}
+                </>
+              )}
+              <p className="pb-room-hint" style={{ marginTop: "auto", paddingTop: "1rem" }}>
+                Share <strong>{code}</strong> to bring people in.
+                {!isHost && hostPeer && (
+                  <>{" "}{hostPeer.name} is the host.</>
+                )}
+              </p>
+            </aside>
 
-      <main id="main" className="pb-welcome-main pb-room-main">
-        {/* Session tab — stage + transport + people chips + hint */}
-        <div
-          role="tabpanel"
-          id="pb-tab-session"
-          aria-labelledby="pb-tab-btn-session"
-          hidden={activeTab !== "session"}
-        >
-          <div className="pb-room-stage">
-            {stageContent}
+            {/* Center — player stage + queue */}
+            <main id="main" className="pb-room-center">
+              <div className="pb-room-stage">{stageContent}</div>
+              {queueRows}
+            </main>
+
+            {/* Right sidebar — chat */}
+            <aside className="pb-room-right">
+              {chatPanel}
+            </aside>
           </div>
-          {transportRow}
-          {peoplePillRow}
-          <p className="pb-room-hint" style={{ marginTop: "0.5rem" }}>
-            Share <strong>{code}</strong> to bring people in. Audio uploads are
-            capped at 15&nbsp;MB.
-            {!isHost && hostPeer && (
-              <>{" "}<span style={{ color: "var(--pb-text-soft)" }}>{hostPeer.name} is the host.</span></>
-            )}
-          </p>
-        </div>
 
-        {/* Media tab — queue + add panel */}
-        <div
-          role="tabpanel"
-          id="pb-tab-media"
-          aria-labelledby="pb-tab-btn-media"
-          hidden={activeTab !== "media"}
-        >
-          {mediaPanel}
-        </div>
-
-        {/* Chat tab */}
-        <div
-          role="tabpanel"
-          id="pb-tab-chat"
-          aria-labelledby="pb-tab-btn-chat"
-          hidden={activeTab !== "chat"}
-        >
-          {chatPanel}
-        </div>
-      </main>
-
-      {/* ── Mini-player: mobile, when playing, not in session tab ──── */}
-      {hasMiniPlayer && (
-        <aside className="pb-mini-player" aria-label="Now playing">
-          <div
-            className={`pb-playing-bars pb-mini-bars${state!.playing ? "" : " is-paused"}`}
-            aria-hidden
-          >
-            <span /><span /><span />
+          {/* Transport bar — full-width strip at bottom */}
+          <div className="pb-room-transport">
+            {transportRow}
           </div>
-          <div className="pb-mini-info">
-            <p className="pb-mini-title">{mediaLabel(state!.media)}</p>
-            {autoplayBlocked && <p className="pb-mini-sub">Tap to start</p>}
-          </div>
-          {(isHost || autoplayBlocked) && (
+        </>
+      ) : (
+        /* ── Mobile: tab bar + tab panels ─────────────────────────── */
+        <>
+          <nav className="pb-room-tabbar" aria-label="Room sections">
             <button
-              type="button"
-              className="pb-mini-btn"
-              onClick={autoplayBlocked ? onResyncTap : (state!.playing ? onAudioPause : onAudioPlay)}
-              aria-label={state!.playing && !autoplayBlocked ? "Pause" : "Play"}
+              id="pb-tab-btn-session"
+              role="tab"
+              aria-controls="pb-tab-session"
+              aria-selected={activeTab === "session"}
+              className={`pb-room-tab${activeTab === "session" ? " is-active" : ""}`}
+              onClick={() => setActiveTab("session")}
             >
-              {state!.playing && !autoplayBlocked
-                ? <Pause size={16} aria-hidden />
-                : <Play size={16} aria-hidden />}
+              <Headphones size={20} aria-hidden />
+              <span>Session</span>
             </button>
+            <button
+              id="pb-tab-btn-media"
+              role="tab"
+              aria-controls="pb-tab-media"
+              aria-selected={activeTab === "media"}
+              className={`pb-room-tab${activeTab === "media" ? " is-active" : ""}`}
+              onClick={() => setActiveTab("media")}
+            >
+              <ListMusic size={20} aria-hidden />
+              <span>Media{queue.length > 0 ? ` · ${queue.length}` : ""}</span>
+            </button>
+            <button
+              id="pb-tab-btn-chat"
+              role="tab"
+              aria-controls="pb-tab-chat"
+              aria-selected={activeTab === "chat"}
+              className={`pb-room-tab${activeTab === "chat" ? " is-active" : ""}`}
+              onClick={() => setActiveTab("chat")}
+            >
+              <MessageCircle size={20} aria-hidden />
+              <span>Chat{chat.length > 0 ? ` · ${chat.length}` : ""}</span>
+            </button>
+          </nav>
+
+          <main id="main" className="pb-welcome-main pb-room-main">
+            {/* Session tab */}
+            <div role="tabpanel" id="pb-tab-session" aria-labelledby="pb-tab-btn-session" hidden={activeTab !== "session"}>
+              <div className="pb-room-stage">{stageContent}</div>
+              {transportRow}
+              {peoplePillRow}
+              <p className="pb-room-hint" style={{ marginTop: "0.5rem" }}>
+                Share <strong>{code}</strong> to bring people in.
+                {!isHost && hostPeer && (
+                  <>{" "}<span style={{ color: "var(--pb-text-soft)" }}>{hostPeer.name} is the host.</span></>
+                )}
+              </p>
+            </div>
+
+            {/* Media tab */}
+            <div role="tabpanel" id="pb-tab-media" aria-labelledby="pb-tab-btn-media" hidden={activeTab !== "media"}>
+              {mediaPanel}
+            </div>
+
+            {/* Chat tab */}
+            <div role="tabpanel" id="pb-tab-chat" aria-labelledby="pb-tab-btn-chat" hidden={activeTab !== "chat"}>
+              {chatPanel}
+            </div>
+          </main>
+
+          {/* Mini-player — mobile only, when playing away from session tab */}
+          {hasMiniPlayer && (
+            <aside className="pb-mini-player" aria-label="Now playing">
+              <div className={`pb-playing-bars pb-mini-bars${state!.playing ? "" : " is-paused"}`} aria-hidden>
+                <span /><span /><span />
+              </div>
+              <div className="pb-mini-info">
+                <p className="pb-mini-title">{mediaLabel(state!.media)}</p>
+                {autoplayBlocked && <p className="pb-mini-sub">Tap to start</p>}
+              </div>
+              {(isHost || autoplayBlocked) && (
+                <button
+                  type="button"
+                  className="pb-mini-btn"
+                  onClick={autoplayBlocked ? onResyncTap : (state!.playing ? onAudioPause : onAudioPlay)}
+                  aria-label={state!.playing && !autoplayBlocked ? "Pause" : "Play"}
+                >
+                  {state!.playing && !autoplayBlocked
+                    ? <Pause size={16} aria-hidden />
+                    : <Play size={16} aria-hidden />}
+                </button>
+              )}
+            </aside>
           )}
-        </aside>
+        </>
       )}
     </div>
   );

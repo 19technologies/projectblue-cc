@@ -1025,6 +1025,92 @@ h1, h2, h3, h4, h5, h6, button {
   min-width: 0;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Three-column desktop layout — Left | Center | Right + transport.
+   Only active at ≥ 768px via the isDesktop JSX branch.
+   ────────────────────────────────────────────────────────────── */
+.pb-room-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--pb-hairline);
+}
+
+.pb-room-left {
+  width: 16rem;
+  flex-shrink: 0;
+  border-right: 1px solid var(--pb-hairline);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1rem 1rem 1.25rem;
+  gap: 0.5rem;
+}
+
+.pb-room-center {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pb-room-right {
+  width: 17.5rem;
+  flex-shrink: 0;
+  border-left: 1px solid var(--pb-hairline);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Transport bar — full-width strip anchored at the page bottom */
+.pb-room-transport {
+  border-top: 1px solid var(--pb-hairline);
+  padding: 0.6rem 1.5rem;
+  background: var(--pb-bg);
+  flex-shrink: 0;
+}
+
+/* Section label in left sidebar */
+.pb-left-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pb-text-faint);
+  margin-bottom: 0.35rem;
+}
+
+/* Divider between people list and upload controls */
+.pb-left-divider {
+  border: 0;
+  border-top: 1px solid var(--pb-hairline);
+  margin: 0.5rem 0;
+}
+
+/* Right sidebar chat — fill full height */
+.pb-room-right .pb-side-chat {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+}
+
+/* Chat scroll fills right column */
+.pb-room-right .pb-chat-scroll {
+  flex: 1;
+  max-height: none;
+}
+
+/* Wider sidebars on large screens */
+@media (min-width: 1200px) {
+  .pb-room-left  { width: 17.5rem; }
+  .pb-room-right { width: 19rem; }
+}
+
 /* Sidebar panel chrome */
 .pb-side-panel {
   border: 1px solid var(--pb-hairline);
@@ -1124,7 +1210,7 @@ h1, h2, h3, h4, h5, h6, button {
 }
 .pb-playing-bars span {
   flex: 1;
-  background: var(--pb-accent);
+  background: var(--pb-text-soft);
   border-radius: 1px;
   height: 30%;
   animation: pb-bar 0.85s ease-in-out infinite alternate;
@@ -1197,27 +1283,24 @@ h1, h2, h3, h4, h5, h6, button {
   background: color-mix(in srgb, var(--pb-accent) 8%, transparent);
 }
 
-/* Square track thumbnail — solid color block with icon */
+/* Square track thumbnail — neutral, no accent colors */
 .pb-track-thumb {
   width: 2.5rem;
   height: 2.5rem;
-  background: var(--pb-ink);
-  color: var(--pb-on-ink);
+  background: var(--pb-hairline);
+  color: var(--pb-text-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 2px;
-}
-.pb-track-thumb-yt {
-  background: var(--pb-accent);
+  border-radius: 0.125rem;
 }
 .pb-yt-label {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 700;
   font-size: 0.65rem;
   letter-spacing: 0.06em;
-  color: var(--pb-on-ink);
+  color: var(--pb-text-soft);
 }
 
 /* Track info: title + badge stacked */
@@ -1243,9 +1326,6 @@ h1, h2, h3, h4, h5, h6, button {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--pb-text-faint);
-}
-.pb-track-badge-yt {
-  color: var(--pb-accent);
 }
 
 .pb-queue-actions {
@@ -1746,9 +1826,6 @@ h1, h2, h3, h4, h5, h6, button {
   font-size: 0.82rem;
   color: var(--pb-text);
 }
-.pb-people-chip.is-host {
-  border-color: var(--pb-accent);
-}
 .pb-chip-tag {
   font-size: 0.65rem;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -1757,41 +1834,41 @@ h1, h2, h3, h4, h5, h6, button {
   text-transform: uppercase;
   color: var(--pb-text-faint);
 }
-.pb-people-chip.is-host .pb-chip-tag { color: var(--pb-accent); }
 
-/* Plus circle button — media panel header */
+/* Plus circle button — neutral, low visual weight */
 .pb-plus-btn {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 50%;
-  border: 1.5px solid var(--pb-ink);
+  border: 1px solid var(--pb-hairline);
   background: transparent;
-  color: var(--pb-ink);
+  color: var(--pb-text-soft);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   margin-left: 0.5rem;
   flex-shrink: 0;
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, color 160ms ease;
 }
-.pb-plus-btn:hover,
-.pb-plus-btn.is-open {
-  background: var(--pb-ink);
-  color: var(--pb-on-ink);
-}
-.pb-plus-btn.is-open {
-  transform: rotate(45deg);
+.pb-plus-btn:hover {
+  border-color: var(--pb-text-soft);
+  color: var(--pb-text);
 }
 
-/* Inline add panel — below queue header */
-.pb-add-panel {
-  padding: 0.75rem 0 0.65rem;
-  border-bottom: 1px solid var(--pb-hairline);
-  margin-bottom: 0.5rem;
+/* Add controls container — used in left sidebar (desktop) and media panel (mobile) */
+.pb-add-controls {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Queue section — used standalone in desktop center column */
+.pb-queue-section {
+  transition: background 160ms ease;
+}
+.pb-queue-section.is-drop-target {
+  background: color-mix(in srgb, var(--pb-accent) 4%, var(--pb-bg));
 }
 
 /* ──────────────────────────────────────────────────────────────
