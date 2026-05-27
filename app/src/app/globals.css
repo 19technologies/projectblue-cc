@@ -4,8 +4,7 @@
    Project Blue design tokens.
 
    Influences (in order of weight):
-     1. gov.uk     — decisive type hierarchy, accent yellow focus,
-                     black + white core with one accent.
+     1. gov.uk     — decisive type hierarchy, black + white core with one accent.
      2. Mont Blanc — monolithic stacked word-mark, considered.
      3. cosmos.so  — paper-blue warmth, italic display moments,
                      calm 200ms cubic-bezier transitions.
@@ -28,8 +27,6 @@
   --pb-accent:        #4C6CB3;
   --pb-accent-strong: #2E4A8F;
   --pb-hairline:      rgba(11, 14, 20, 0.15);
-  --pb-rule:          #0B0E14;
-  --pb-focus:         #FFDD00;
 }
 
 [data-theme="dark"] {
@@ -45,8 +42,6 @@
   --pb-accent:        #5B7BC4;
   --pb-accent-strong: #8AA8DE;
   --pb-hairline:      rgba(236, 240, 255, 0.18);
-  --pb-rule:          #ECF0FF;
-  --pb-focus:         #FFDD00;
 }
 
 @theme inline {
@@ -74,14 +69,6 @@ h1, h2, h3, h4, h5, h6, button {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 700;
   letter-spacing: -0.005em;
-}
-
-/* gov.uk-style 3px-yellow / 3px-black focus indicator on every focusable */
-*:focus-visible {
-  outline: 3px solid var(--pb-focus) !important;
-  outline-offset: 0 !important;
-  box-shadow: 0 0 0 6px var(--pb-rule) !important;
-  border-radius: 0 !important;
 }
 
 ::selection { background: var(--pb-accent); color: #FFFFFF; }
@@ -326,7 +313,7 @@ h1, h2, h3, h4, h5, h6, button {
 
 .pb-welcome-rule {
   border: 0;
-  border-top: 3px solid var(--pb-rule);
+  border-top: 1px solid var(--pb-hairline);
   margin: 0 0 3.5rem;
   width: 100%;
 }
