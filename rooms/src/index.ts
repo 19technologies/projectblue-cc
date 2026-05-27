@@ -139,6 +139,8 @@ export class RoomDO extends DurableObject<Env> {
       joinedAt: ++this.joinCounter,
     };
     this.sessions.add(session);
+    // Cancel any pending room-clear alarm — someone rejoined within the grace period.
+    void this.ctx.storage.deleteAlarm();
 
     server.addEventListener("message", (event) => {
       if (typeof event.data === "string") this.onMessage(session, event.data);
@@ -533,15 +535,22 @@ export class RoomDO extends DurableObject<Env> {
       this.electHost();
       this.broadcast({ type: "HOST", hostId: this.hostId });
     }
-    // Last person left — reset room state so the next group starts fresh.
-    // Mode (shuffle/repeat/guestCanUpload) is intentionally kept.
+    // Last person left — schedule a clear after 60 s. Mobile WebSockets drop
+    // constantly (screen lock, app switch, network handoff), so we give a
+    // grace period for reconnection before wiping the playlist.
     if (this.sessions.size === 0) {
-      this.state = null;
-      this.queue = [];
-      this.chat = [];
-      void this.ctx.storage.delete(SK.state);
-      void this.ctx.storage.delete(SK.queue);
-      void this.ctx.storage.delete(SK.chat);
+      void this.ctx.storage.setAlarm(Date.now() + 60_000);
     }
+  }
+
+  async alarm() {
+    // Only wipe if the room is still empty when the alarm fires.
+    if (this.sessions.size > 0) return;
+    this.state = null;
+    this.queue = [];
+    this.chat = [];
+    void this.ctx.storage.delete(SK.state);
+    void this.ctx.storage.delete(SK.queue);
+    void this.ctx.storage.delete(SK.chat);
   }
 }
