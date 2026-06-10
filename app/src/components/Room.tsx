@@ -1354,6 +1354,7 @@ export const Room = ({ code }: { code: string }) => {
     <input
       ref={fileInputRef}
       type="file"
+      accept="audio/*"
       multiple
       disabled={uploading}
       onChange={(e) => {
