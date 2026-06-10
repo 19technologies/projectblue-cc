@@ -322,12 +322,5 @@
    band sits on top of the underlying TopBar's dark fill, reading as
    an accent stripe. */
 .pb-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: #5B7BC4;   /* pb-bar dark — keeps the band visible */
-  z-index: 9999;
-  pointer-events: none;
+  display: none;
 }
